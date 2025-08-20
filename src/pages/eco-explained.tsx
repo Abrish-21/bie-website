@@ -300,7 +300,7 @@ export default function EconomyExplainedPage() {
         </section>
 
         {/* Newsletter CTA */}
-        <section className="mt-16 bg-gradient-to-r from-green-600 to-green-800 rounded-2xl p-8 text-center text-white">
+        <section className="mt-16  rounded-2xl p-8 text-center text-white" style={{ backgroundColor: '#3d3d3d' }}>
           <h2 className="text-3xl font-bold mb-4">Stay Informed, Stay Ahead</h2>
           <p className="text-xl text-green-100 mb-8 max-w-3xl mx-auto">
             Get our weekly "Economy Explained" digest delivered to your inbox. Complex topics made simple, with real examples from Ethiopian markets.
