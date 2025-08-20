@@ -21,7 +21,8 @@ export function Footer() {
   ];
 
   return (
-    <footer className="bg-gray-900 text-white">
+    <footer className=" text-white" style={{ backgroundColor: '#3d3d3d' }}
+    >
       {/* Main Footer */}
       <div className="max-w-7xl mx-auto px-4 py-12">
         <div className="grid md:grid-cols-2 lg:grid-cols-6 gap-8">

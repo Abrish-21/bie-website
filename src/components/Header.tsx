@@ -12,26 +12,26 @@ export function Header() {
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
           <div className="flex-shrink-0">
+            <a href="/">
             <h1 className="text-2xl font-bold text-white">
               Business Info <span className="text-red-600">Ethiopia</span>
             </h1>
+
+            </a>
           </div>
 
           {/* Navigation */}
           <nav className="hidden lg:flex space-x-6">
-            <a href="#" className="text-white hover:text-red-600 px-3 py-2 text-sm font-medium transition-colors">
-              Home
-            </a>
-            <a href="#" className="text-white hover:text-red-600 px-3 py-2 text-sm font-medium transition-colors">
+            <a href="business-pulse" className="text-white hover:text-red-600 px-3 py-2 text-sm font-medium transition-colors">
               Business Pulse
             </a>
-            <a href="#" className="text-white hover:text-red-600 px-3 py-2 text-sm font-medium transition-colors">
+            <a href="/insight-center" className="text-white hover:text-red-600 px-3 py-2 text-sm font-medium transition-colors">
               Insight Center
             </a>
-            <a href="#" className="text-white hover:text-red-600 px-3 py-2 text-sm font-medium transition-colors">
+            <a href="/opportunities" className="text-white hover:text-red-600 px-3 py-2 text-sm font-medium transition-colors">
               Opportunity Hub
             </a>
-            <a href="#" className="text-white hover:text-red-600 px-3 py-2 text-sm font-medium transition-colors">
+            <a href="/eco-explained" className="text-white hover:text-red-600 px-3 py-2 text-sm font-medium transition-colors">
               Economy Explained
             </a>
             

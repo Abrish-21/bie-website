@@ -35,7 +35,7 @@ export function MainContent() {
               <img
                 src="https://images.unsplash.com/photo-1557804500-7a58fbcd4d1a?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxidXNpbmVzcyUyMG1lZXRpbmclMjBjb25mZXJlbmNlfGVufDF8fHx8MTc1NTI3ODQ2Nnww&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral"
                 alt="Main news story"
-                className="w-full h-96 object-cover rounded-lg"
+                className="w-full h-96 object-cover"
               />
               <div className="absolute top-4 left-4">
                 <span className="bg-red-600 text-white px-3 py-1 text-xs font-medium rounded">
