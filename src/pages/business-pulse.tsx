@@ -5,8 +5,9 @@ import { Input } from '../components/ui/input';
 import { Badge } from '../components/ui/badge';
 import { Card, CardContent } from '../components/ui/card';
 import { Calendar, Clock, TrendingUp, Briefcase, Mail, ChevronLeft, ChevronRight, ExternalLink, Download } from 'lucide-react';
-import { Header } from '@/components/Header';
+
 import { Footer } from '@/components/Footer';
+import {Header} from '@/components/Header';
 
 export default function BusinessPulsePage() {
   // Featured Article for top of Daily Business Pulse

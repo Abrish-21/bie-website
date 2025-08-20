@@ -28,9 +28,14 @@ export function Footer() {
         <div className="grid md:grid-cols-2 lg:grid-cols-6 gap-8">
           {/* Brand */}
           <div className="lg:col-span-2">
-            <h4 className="text-2xl font-bold mb-4">
-              Business Info <span className="text-red-600">Ethiopia</span>
-            </h4>
+            <a href="/">
+              <img
+              src="/logo/bie-logo.png"
+              alt="Business Info Ethiopia Logo"
+              width="150"
+              height="100"
+              />
+            </a>
             <p className="text-gray-400 mb-6 leading-relaxed">
               Ethiopia's leading source for business news, market analysis, and economic insights. 
               Trusted by professionals, investors, and decision-makers across the country.

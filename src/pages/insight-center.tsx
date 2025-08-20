@@ -5,9 +5,10 @@ import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Badge } from '../components/ui/badge';
 import { Card, CardContent } from '../components/ui/card';
-import { Header } from '@/components/Header';
+
 import { Footer } from '@/components/Footer';
 import { FileText, BarChart3, Users, TrendingUp, Download, Eye, Calendar, Quote, ArrowUp, ArrowDown, ExternalLink } from 'lucide-react';
+import {Header} from '@/components/Header';
 
 export default function InsightCenterPage() {
   // Featured Report for top section
