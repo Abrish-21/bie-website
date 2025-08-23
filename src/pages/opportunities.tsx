@@ -115,105 +115,15 @@ export default  function OpportunityHubPage() {
           </div>
         </div>
       </section>
-
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        
-        {/* B-Idea Market */}
-        <section className="mb-16">
-          <div className="flex items-center justify-between mb-8">
-            <div className="flex items-center space-x-3">
-              <Lightbulb className="h-8 w-8 text-yellow-600" />
-              <h2 className="text-3xl font-bold text-gray-900">B-Idea Market</h2>
-            </div>
-            <Button className="bg-yellow-500 hover:bg-yellow-600 text-black">
-              Submit Your Idea
-            </Button>
-          </div>
-          
-          {/* Featured Pitch */}
-          <Card className="overflow-hidden shadow-xl border-0 bg-gradient-to-r from-yellow-50 to-orange-50">
-            <div className="grid grid-cols-1 lg:grid-cols-2">
-              <div className="relative h-80 lg:h-full">
-                <ImageWithFallback
-                  src={featuredPitch.imageUrl}
-                  alt={featuredPitch.title}
-                  className="w-full h-full object-cover"
-                />
-                <div className="absolute top-4 left-4">
-                  <Badge className="bg-yellow-500 text-black">Featured Pitch</Badge>
-                </div>
-              </div>
-              
-              <CardContent className="p-8">
-                <div className="flex items-center justify-between mb-4">
-                  <span className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-medium">
-                    {featuredPitch.sector}
-                  </span>
-                  <span className="text-yellow-600 font-bold">{featuredPitch.daysLeft} days left</span>
-                </div>
-                
-                <h3 className="text-2xl font-bold text-gray-900 mb-2">{featuredPitch.title}</h3>
-                <p className="text-gray-600 mb-6">{featuredPitch.description}</p>
-                
-                <div className="flex flex-wrap gap-2 mb-6">
-                  {featuredPitch.tags.map((tag) => (
-                    <Badge key={tag} variant="secondary">{tag}</Badge>
-                  ))}
-                </div>
-                
-                <div className="grid grid-cols-2 gap-4 mb-6 text-sm">
-                  <div>
-                    <span className="text-gray-500">Funding Goal</span>
-                    <div className="font-bold text-lg">{featuredPitch.fundingGoal}</div>
-                  </div>
-                  <div>
-                    <span className="text-gray-500">Raised So Far</span>
-                    <div className="font-bold text-lg text-green-600">{featuredPitch.raised}</div>
-                  </div>
-                  <div>
-                    <span className="text-gray-500">Investors</span>
-                    <div className="font-bold">{featuredPitch.investors}</div>
-                  </div>
-                  <div>
-                    <span className="text-gray-500">Founder</span>
-                    <div className="font-bold">{featuredPitch.founder}</div>
-                  </div>
-                </div>
-                
-                {/* Progress Bar */}
-                <div className="mb-6">
-                  <div className="flex justify-between text-sm text-gray-600 mb-2">
-                    <span>Progress</span>
-                    <span>48%</span>
-                  </div>
-                  <div className="w-full bg-gray-200 rounded-full h-2">
-                    <div className="bg-yellow-500 h-2 rounded-full" style={{ width: '48%' }}></div>
-                  </div>
-                </div>
-                
-                <div className="flex space-x-4">
-                  <Button className="flex-1 bg-yellow-500 hover:bg-yellow-600 text-black">
-                    View Full Pitch
-                  </Button>
-                  <Button variant="outline" className="flex-1 border-yellow-600 text-yellow-600 hover:bg-yellow-50">
-                    Connect with Founder
-                  </Button>
-                </div>
-              </CardContent>
-            </div>
-          </Card>
-        </section>
-
-        {/* Business Directory */}
+ {/* Business Directory */}
         <section className="mb-16">
           <div className="flex items-center justify-between mb-8">
             <div className="flex items-center space-x-3">
               <Users className="h-8 w-8 text-yellow-600" />
               <h2 className="text-3xl font-bold text-gray-900">Business Directory</h2>
             </div>
-            <Button variant="outline" className="text-yellow-600 border-yellow-600 hover:bg-yellow-50">
-              Add Your Business
-            </Button>
+          
           </div>
           
           {/* Search Bar */}

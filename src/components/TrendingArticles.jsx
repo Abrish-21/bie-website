@@ -1,13 +1,27 @@
+// components/TrendingArticles.jsx
+
+import React from 'react';
+import Link from 'next/link';
+
 const trending1 = "/assets/trending-1.jpg";
 const trending2 = "/assets/trending-2.jpg";
 const trending3 = "/assets/trending-3.jpg";
 const trending4 = "/assets/trending-4.jpg";
+
+// Reusing the createSlug helper function
+const createSlug = (title) => {
+  return title
+    .toLowerCase()
+    .replace(/ /g, '-')
+    .replace(/[^\w-]+/g, '');
+};
 
 const trendingArticles = [
   {
     id: 1,
     title:
       "US faces $9.4bn tourism loss from new $250 visa fee targeting African countries",
+    excerpt: "The United States is projected to face a significant downturn in tourism revenue due to a newly announced $250 visa fee targeting travelers from African countries. Analysts estimate that this could cost the US tourism industry up to $9.4 billion annually.",
     image: trending1,
     content: `
       <p>The United States is projected to face a significant downturn in tourism revenue due to a newly announced $250 visa fee targeting travelers from African countries. Analysts estimate that this could cost the US tourism industry up to $9.4 billion annually.</p>
@@ -20,11 +34,13 @@ const trendingArticles = [
       <p>Several African countries have expressed concerns over the move, calling for a reassessment of the policy to protect mutual tourism interests.</p>
     `,
     timestamp: "5 hours ago",
+    author: "Global Affairs", // Added for consistency
   },
   {
     id: 2,
     title:
       "Construction begins on East Africa's first-ever cross-border SGR worth $2.15 billion",
+    excerpt: "Construction has officially started on East Africa’s first-ever cross-border Standard Gauge Railway (SGR), a $2.15 billion project aimed at connecting Kenya, Uganda, and South Sudan.",
     image: trending2,
     content: `
       <p>Construction has officially started on East Africa’s first-ever cross-border Standard Gauge Railway (SGR), a $2.15 billion project aimed at connecting Kenya, Uganda, and South Sudan. The railway is expected to revolutionize regional trade and travel.</p>
@@ -37,11 +53,13 @@ const trendingArticles = [
       <p>Government officials emphasize that this cross-border railway is part of a larger plan to integrate East African economies more closely.</p>
     `,
     timestamp: "8 hours ago",
+    author: "Infrastructure Watch", // Added for consistency
   },
   {
     id: 3,
     title:
       "African Union pushes for new world map that reflects the continent's true size",
+    excerpt: "The African Union (AU) has proposed a new global map design that reflects Africa’s actual size, aiming to correct the distortion caused by traditional Mercator projections.",
     image: trending3,
     content: `
       <p>The African Union (AU) has proposed a new global map design that reflects Africa’s actual size, aiming to correct the distortion caused by traditional Mercator projections.</p>
@@ -54,11 +72,13 @@ const trendingArticles = [
       <p>The AU plans to release educational materials to encourage adoption of the new maps in schools worldwide.</p>
     `,
     timestamp: "1 day ago",
+    author: "Global Insights", // Added for consistency
   },
   {
     id: 4,
     title:
       "A human species unknown to scientists has been discovered in East Africa's oldest country",
+    excerpt: "In a groundbreaking discovery, scientists have uncovered fossil evidence of a previously unknown human species in East Africa's oldest country. The findings could reshape our understanding of human evolution.",
     image: trending4,
     content: `
       <p>In a groundbreaking discovery, scientists have uncovered fossil evidence of a previously unknown human species in East Africa's oldest country. The findings could reshape our understanding of human evolution.</p>
@@ -71,9 +91,9 @@ const trendingArticles = [
       <p>The discovery has drawn global attention and may lead to new archaeological expeditions in the region.</p>
     `,
     timestamp: "2 days ago",
+    author: "Science & Tech", // Added for consistency
   },
 ];
-
 
 const TrendingArticles = () => {
   return (
@@ -81,20 +101,36 @@ const TrendingArticles = () => {
       <h3 className="news-sidebar-title">TRENDING</h3>
       <div className="space-y-6">
         {trendingArticles.map((article) => (
-          <article key={article.id} className="news-trending-item">
-            <div className="flex space-x-3">
-              <img
-                src={article.image}
-                alt={article.title}
-                className="w-20 h-20 object-cover rounded-lg flex-shrink-0"
-              />
-              <div className="flex-1">
-                <h4 className="text-sm font-semibold text-headline-primary leading-tight hover:text-news-primary transition-colors cursor-pointer">
-                  {article.title}
-                </h4>
+          <Link
+            key={article.id}
+            href={{
+              pathname: `/business-pulse/${createSlug(article.title)}`,
+              query: {
+                title: article.title,
+                excerpt: article.excerpt,
+                thumbnail: article.image,
+                author: article.author,
+                timestamp: article.timestamp,
+                description: article.excerpt, // Passing excerpt as the description for consistency
+              }
+            }}
+            className="block"
+          >
+            <article className="news-trending-item">
+              <div className="flex space-x-3">
+                <img
+                  src={article.image}
+                  alt={article.title}
+                  className="w-20 h-20 object-cover rounded-lg flex-shrink-0"
+                />
+                <div className="flex-1">
+                  <h4 className="text-sm font-semibold text-headline-primary leading-tight hover:text-news-primary transition-colors">
+                    {article.title}
+                  </h4>
+                </div>
               </div>
-            </div>
-          </article>
+            </article>
+          </Link>
         ))}
       </div>
     </div>
