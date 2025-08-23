@@ -23,7 +23,7 @@ export function Header() {
 
           {/* Navigation */}
           <nav className="hidden lg:flex space-x-6">
-            <a href="business-pulse" className="text-white hover:text-red-600 px-3 py-2 text-sm font-medium transition-colors">
+            <a href="/business-pulse" className="text-white hover:text-red-600 px-3 py-2 text-sm font-medium transition-colors">
               Business Pulse
             </a>
             <a href="/insight-center" className="text-white hover:text-red-600 px-3 py-2 text-sm font-medium transition-colors">
@@ -32,7 +32,7 @@ export function Header() {
             <a href="/opportunities" className="text-white hover:text-red-600 px-3 py-2 text-sm font-medium transition-colors">
               Opportunity Hub
             </a>
-            <a href="/eco-explained" className="text-white hover:text-red-600 px-3 py-2 text-sm font-medium transition-colors">
+            <a href="/economy-explained" className="text-white hover:text-red-600 px-3 py-2 text-sm font-medium transition-colors">
               Economy Explained
             </a>
           </nav>
