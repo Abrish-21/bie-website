@@ -1,14 +1,15 @@
 // src/components/FeaturedArticles.tsx
 
 import { Clock, User } from 'lucide-react';
-import Link from 'next/link'; // Import Link
-import allPosts from '../pages/posts'; // Correctly import allPosts as a data array
-import { ReactElement, JSXElementConstructor, ReactNode, ReactPortal, Key } from 'react';
+import Link from 'next/link';
+// Import allPosts and createSlug from the new shared data file
+import { createSlug, allPosts, FeaturedArticle } from '../data/posts';
 
 
 export function FeaturedArticles() {
   // Filter for 'featuredArticle' types and slice to get the desired number
-  const featuredArticles = allPosts.filter((post: { type: string; }) => post.type === 'featuredArticle').slice(0, 6); // Display up to 6 articles
+  // Asserting the type to FeaturedArticle[] for better type safety in the map function
+  const featuredArticles = allPosts.filter(post => post.type === 'featuredArticle').slice(0, 6) as FeaturedArticle[];
 
   return (
     <section className="bg-gray-50 py-12">
@@ -22,14 +23,14 @@ export function FeaturedArticles() {
         </div>
 
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {featuredArticles.map((article: { slug: any; imageUrl: string | Blob | undefined; title: string | number | bigint | boolean | ReactElement<unknown, string | JSXElementConstructor<any>> | Iterable<ReactNode> | Promise<string | number | bigint | boolean | ReactPortal | ReactElement<unknown, string | JSXElementConstructor<any>> | Iterable<ReactNode> | null | undefined> | null | undefined; category: string | number | bigint | boolean | ReactElement<unknown, string | JSXElementConstructor<any>> | Iterable<ReactNode> | ReactPortal | Promise<string | number | bigint | boolean | ReactPortal | ReactElement<unknown, string | JSXElementConstructor<any>> | Iterable<ReactNode> | null | undefined> | null | undefined; excerpt: string | number | bigint | boolean | ReactElement<unknown, string | JSXElementConstructor<any>> | Iterable<ReactNode> | ReactPortal | Promise<string | number | bigint | boolean | ReactPortal | ReactElement<unknown, string | JSXElementConstructor<any>> | Iterable<ReactNode> | null | undefined> | null | undefined; author: string | number | bigint | boolean | ReactElement<unknown, string | JSXElementConstructor<any>> | Iterable<ReactNode> | ReactPortal | Promise<string | number | bigint | boolean | ReactPortal | ReactElement<unknown, string | JSXElementConstructor<any>> | Iterable<ReactNode> | null | undefined> | null | undefined; readTime: string | number | bigint | boolean | ReactElement<unknown, string | JSXElementConstructor<any>> | Iterable<ReactNode> | ReactPortal | Promise<string | number | bigint | boolean | ReactPortal | ReactElement<unknown, string | JSXElementConstructor<any>> | Iterable<ReactNode> | null | undefined> | null | undefined; }, index: Key | null | undefined) => (
+          {featuredArticles.map((article, index) => ( // No more verbose inline types needed here
             // Wrap each article with a Link component
             <Link key={index} href={`/posts/${article.slug}`} passHref>
               <article className="bg-white rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow group cursor-pointer">
                 <div className="relative">
                   <img
                     src={article.imageUrl}
-                    alt={typeof article.title === 'string' ? article.title : ''}
+                    alt={article.title} // `article.title` is guaranteed to be a string by FeaturedArticle interface
                     className="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-300"
                   />
                   <div className="absolute top-3 left-3">
@@ -51,7 +52,7 @@ export function FeaturedArticles() {
                     <User className="w-3 h-3 mr-1" />
                     <span className="mr-3">{article.author}</span>
                     <Clock className="w-3 h-3 mr-1" />
-                    <span>{article.readTime}</span> {/* Changed from timeAgo to readTime to match allPosts */}
+                    <span>{article.readTime}</span>
                   </div>
                 </div>
               </article>
