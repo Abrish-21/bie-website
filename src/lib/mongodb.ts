@@ -36,4 +36,3 @@ export async function connectDB() {
   const client = await clientPromise;
   return client.db();
 }
-

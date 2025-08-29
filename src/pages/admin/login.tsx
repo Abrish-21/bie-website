@@ -1,7 +1,6 @@
-// src/pages/admin/login.tsx
 import React, { useState } from 'react';
 import { useRouter } from 'next/router';
-import { authAPI } from '../../lib/api'; // Ensure this path is correct
+import { authAPI } from '../../lib/api';
 
 const AdminLogin = () => {
   const [email, setEmail] = useState('');
@@ -13,15 +12,14 @@ const AdminLogin = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    setError(''); // Clear previous errors
+    setError('');
 
     try {
-      // Ensure authAPI and its login method are correctly imported and defined
       const { user, token } = await authAPI.login(email, password);
       
       console.log('Login successful:', { user, token: !!token });
       
-      // Store auth data in localStorage
+      // Store auth data
       localStorage.setItem('authToken', token);
       localStorage.setItem('user', JSON.stringify(user));
       
@@ -31,8 +29,7 @@ const AdminLogin = () => {
       await router.push('/admin/dashboard');
     } catch (error: any) {
       console.error('Login error:', error);
-      // Access the error message more robustly for Axios errors
-      setError(error.response?.data?.message || error.message || 'Login failed: An unknown error occurred.');
+      setError(error.response?.data?.error || error.message || 'Login failed');
     } finally {
       setLoading(false);
     }
@@ -123,3 +120,4 @@ const AdminLogin = () => {
 };
 
 export default AdminLogin;
+

@@ -1,4 +1,3 @@
-// src/lib/api.ts
 import axios from 'axios';
 
 const getApiBaseUrl = (): string => {
@@ -10,7 +9,7 @@ const getApiBaseUrl = (): string => {
     return '/api';
   }
   // Fallback for server-side usage during development
-  return 'http://localhost:3000/api'; // Adjust if your backend runs on a different port or URL
+  return 'http://localhost:3000/api';
 };
 
 // Create axios instance with default config
@@ -33,7 +32,7 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
-// Handle auth errors and retries
+// Handle auth errors
 api.interceptors.response.use(
   (response) => response,
   (error) => {
@@ -52,10 +51,7 @@ api.interceptors.response.use(
       if (typeof window !== 'undefined') {
         localStorage.removeItem('authToken');
         localStorage.removeItem('user');
-        // Redirect to admin login if not already there to prevent infinite loops
-        if (window.location.pathname !== '/admin/login') {
-          window.location.href = '/admin/login';
-        }
+        window.location.href = '/admin/login';
       }
     }
     return Promise.reject(error);
@@ -124,7 +120,7 @@ export const postsAPI = {
     return response.data;
   },
   
-  // User management functions (for superadmin) - This section should ideally be in usersAPI or a dedicated adminAPI
+  // User management functions (for superadmin)
   getUsers: async () => {
     const response = await api.get('/users');
     return response.data;
