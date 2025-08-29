@@ -2,14 +2,14 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/router';
-import { ArrowLeft, Save, Eye, UploadCloud, Bold, Italic, List, ListOrdered, Link, Image, Pilcrow, Heading1, Heading2 } from 'lucide-react'; // Added TipTap toolbar icons
+import { ArrowLeft, Save, Eye, UploadCloud, Bold, Italic, List, ListOrdered, Link, Image, Pilcrow, Heading1, Heading2 } from 'lucide-react';
 import { postsAPI } from '../../../lib/api';
 
 // --- TipTap Imports ---
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
-import TiptapLinkExtension from '@tiptap/extension-link'; // Renamed to avoid conflict with lucide-react Link
-import TiptapImageExtension from '@tiptap/extension-image'; // Renamed to avoid conflict with lucide-react Image
+import TiptapLinkExtension from '@tiptap/extension-link';
+import TiptapImageExtension from '@tiptap/extension-image';
 // --- End TipTap Imports ---
 
 // Custom Modal for alerts (replace alert() calls)
@@ -43,10 +43,10 @@ interface PostFormData {
   readTime: number | string;
   author: string;
   authorId: string;
-  fullContent: string; // HTML content from TipTap
-  seoTitle?: string; // Added for completeness
-  seoDescription?: string; // Added for completeness
-  slug?: string; // Slug is usually generated, but kept optional for form consistency
+  fullContent: string;
+  seoTitle?: string;
+  seoDescription?: string;
+  slug?: string;
 }
 
 const CATEGORIES = [
@@ -94,22 +94,18 @@ const TiptapEditor: React.FC<{ initialContent: string; onContentChange: (html: s
     const previousUrl = editor.getAttributes('link').href;
     const url = window.prompt('URL', previousUrl);
 
-    // cancelled
     if (url === null) {
       return;
     }
 
-    // empty
     if (url === '') {
       editor.chain().focus().unsetLink().run();
       return;
     }
 
-    // update link
     editor.chain().focus().setLink({ href: url }).run();
   }, [editor]);
 
-  // Handle image insertion (e.g., from a URL)
   const addImage = useCallback(() => {
     if (!editor) return;
     const url = window.prompt('URL');
@@ -224,7 +220,7 @@ export default function NewPost() {
     readTime: '',
     author: '',
     authorId: '',
-    fullContent: '', // HTML content from TipTap
+    fullContent: '',
     seoTitle: '',
     seoDescription: '',
   });
@@ -268,12 +264,11 @@ export default function NewPost() {
     }));
   }, []);
 
-  // Updated handler for TipTap content (renamed from handleQuillChange)
   const handleEditorContentChange = useCallback((html: string) => {
     setFormData((prev) => ({
       ...prev,
-      content: html, // Store HTML from TipTap
-      fullContent: html, // Also store in fullContent
+      content: html,
+      fullContent: html,
     }));
   }, []);
 
@@ -282,7 +277,7 @@ export default function NewPost() {
       const file = e.target.files[0];
       setSelectedImageFile(file);
       setImagePreviewUrl(URL.createObjectURL(file));
-      setFormData(prev => ({ ...prev, imageUrl: '' })); // Clear direct URL if file selected
+      setFormData(prev => ({ ...prev, imageUrl: '' }));
     } else {
       setSelectedImageFile(null);
       setImagePreviewUrl(null);
@@ -306,20 +301,26 @@ export default function NewPost() {
     }));
   }, []);
 
-  // ⭐ FIX: Modified uploadImage to send FormData instead of Base64 JSON ⭐
   const uploadImage = async (file: File): Promise<string> => {
     setUploadingImage(true);
     try {
+      // ⭐ DEBUG: Log the file object to the browser console before sending ⭐
+      console.log('[FRONTEND_DEBUG] File being sent:', file);
+
+      if (!file) {
+        throw new Error('No valid file provided for upload.');
+      }
+
       const formData = new FormData();
-      formData.append('image', file); // 'image' should match the field name in your API (`files.image`)
+      formData.append('image', file);
 
       const response = await fetch('/api/upload-image', {
         method: 'POST',
         headers: {
-          // 'Content-Type': 'multipart/form-data', // Fetch handles this automatically for FormData
+          // DO NOT explicitly set 'Content-Type' for FormData, fetch handles it automatically
           Authorization: `Bearer ${localStorage.getItem('authToken')}`
         },
-        body: formData, // Send FormData directly
+        body: formData,
       });
 
       if (!response.ok) {
@@ -330,7 +331,7 @@ export default function NewPost() {
       const data = await response.json();
       return data.imageUrl;
     } catch (uploadError: any) {
-      console.error('Error during image upload:', uploadError);
+      console.error('[FRONTEND_ERROR] Error during image upload:', uploadError);
       throw new Error(uploadError.message || 'Failed to upload image.');
     } finally {
       setUploadingImage(false);
@@ -347,6 +348,7 @@ export default function NewPost() {
         setLoading(false);
         return;
     }
+    // ⭐ FIX: Add explicit validation for selectedImageFile here ⭐
     if (!selectedImageFile && !formData.imageUrl) {
         setAlertMessage('Please either select an image file or provide an Image URL.');
         setLoading(false);
@@ -357,8 +359,8 @@ export default function NewPost() {
     try {
       if (selectedImageFile) {
         finalImageUrl = await uploadImage(selectedImageFile);
-      } else if (!finalImageUrl) {
-        throw new Error('No image provided.');
+      } else if (!finalImageUrl) { // Double check if it's still empty here
+        throw new Error('No image provided, even after checking for selected file.');
       }
 
       const postData = {
@@ -476,7 +478,6 @@ export default function NewPost() {
             )}
             <div className="prose max-w-none">
               {formData.content ? (
-                // Render HTML content for preview
                 <div dangerouslySetInnerHTML={{ __html: formData.content }} />
               ) : (
                 <p className="text-gray-400 italic">No content yet...</p>
