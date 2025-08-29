@@ -43,7 +43,10 @@ interface PostFormData {
   readTime: number | string;
   author: string;
   authorId: string;
-  fullContent: string;
+  fullContent: string; // HTML content from TipTap
+  seoTitle?: string; // Added for completeness
+  seoDescription?: string; // Added for completeness
+  slug?: string; // Slug is usually generated, but kept optional for form consistency
 }
 
 const CATEGORIES = [
@@ -65,12 +68,12 @@ const TiptapEditor: React.FC<{ initialContent: string; onContentChange: (html: s
 }) => {
   const editor = useEditor({
     extensions: [
-      StarterKit, // Removed .configure({ history: false }) as it's not a direct config option here
-      TiptapLinkExtension.configure({ // Use renamed extension
+      StarterKit,
+      TiptapLinkExtension.configure({
         openOnClick: false,
         autolink: true,
       }),
-      TiptapImageExtension.configure({ // Use renamed extension
+      TiptapImageExtension.configure({
         inline: true,
         allowBase64: true,
       }),
@@ -98,12 +101,12 @@ const TiptapEditor: React.FC<{ initialContent: string; onContentChange: (html: s
 
     // empty
     if (url === '') {
-      editor.chain().focus().unsetLink().run(); // ⭐ FIX: Changed extendMark to unsetLink
+      editor.chain().focus().unsetLink().run();
       return;
     }
 
     // update link
-    editor.chain().focus().setLink({ href: url }).run(); // ⭐ FIX: Changed extendMark to setLink
+    editor.chain().focus().setLink({ href: url }).run();
   }, [editor]);
 
   // Handle image insertion (e.g., from a URL)
@@ -222,6 +225,8 @@ export default function NewPost() {
     author: '',
     authorId: '',
     fullContent: '', // HTML content from TipTap
+    seoTitle: '',
+    seoDescription: '',
   });
   const [tagInput, setTagInput] = useState('');
   const [alertMessage, setAlertMessage] = useState<string | null>(null);
@@ -277,7 +282,7 @@ export default function NewPost() {
       const file = e.target.files[0];
       setSelectedImageFile(file);
       setImagePreviewUrl(URL.createObjectURL(file));
-      setFormData(prev => ({ ...prev, imageUrl: '' }));
+      setFormData(prev => ({ ...prev, imageUrl: '' })); // Clear direct URL if file selected
     } else {
       setSelectedImageFile(null);
       setImagePreviewUrl(null);
@@ -301,44 +306,34 @@ export default function NewPost() {
     }));
   }, []);
 
+  // ⭐ FIX: Modified uploadImage to send FormData instead of Base64 JSON ⭐
   const uploadImage = async (file: File): Promise<string> => {
     setUploadingImage(true);
     try {
-      const reader = new FileReader();
-      reader.readAsDataURL(file);
+      const formData = new FormData();
+      formData.append('image', file); // 'image' should match the field name in your API (`files.image`)
 
-      return new Promise((resolve, reject) => {
-        reader.onloadend = async () => {
-          try {
-            const base64data = reader.result as string;
-            const response = await fetch('/api/upload-image', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('authToken')}` },
-              body: JSON.stringify({ image: base64data, fileName: file.name }),
-            });
-
-            if (!response.ok) {
-              const errorData = await response.json();
-              throw new Error(errorData.error || 'Image upload failed');
-            }
-
-            const data = await response.json();
-            resolve(data.imageUrl);
-          } catch (uploadError) {
-            console.error('Error during image upload:', uploadError);
-            reject(uploadError);
-          } finally {
-             setUploadingImage(false);
-          }
-        };
-        reader.onerror = error => {
-          console.error('Error reading file:', error);
-          reject(new Error('Failed to read image file.'));
-        };
+      const response = await fetch('/api/upload-image', {
+        method: 'POST',
+        headers: {
+          // 'Content-Type': 'multipart/form-data', // Fetch handles this automatically for FormData
+          Authorization: `Bearer ${localStorage.getItem('authToken')}`
+        },
+        body: formData, // Send FormData directly
       });
-    } catch (error) {
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Image upload failed');
+      }
+
+      const data = await response.json();
+      return data.imageUrl;
+    } catch (uploadError: any) {
+      console.error('Error during image upload:', uploadError);
+      throw new Error(uploadError.message || 'Failed to upload image.');
+    } finally {
       setUploadingImage(false);
-      throw error;
     }
   };
 
@@ -643,6 +638,34 @@ export default function NewPost() {
                   rows={3}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-800"
                   placeholder="Brief summary of the post..."
+                />
+              </div>
+
+              <div className="mt-6">
+                <label htmlFor="seoTitle" className="block text-sm font-medium text-gray-700 mb-2">
+                  SEO Title
+                </label>
+                <input
+                  type="text"
+                  name="seoTitle"
+                  value={formData.seoTitle || ''}
+                  onChange={handleInputChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-800"
+                  placeholder="SEO friendly title..."
+                />
+              </div>
+
+              <div className="mt-6">
+                <label htmlFor="seoDescription" className="block text-sm font-medium text-gray-700 mb-2">
+                  SEO Description
+                </label>
+                <textarea
+                  name="seoDescription"
+                  value={formData.seoDescription || ''}
+                  onChange={handleInputChange}
+                  rows={3}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-800"
+                  placeholder="Meta description for search engines..."
                 />
               </div>
 

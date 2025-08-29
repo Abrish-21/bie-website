@@ -4,7 +4,6 @@ import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/router';
 import { ArrowLeft, Save, Eye, UploadCloud, Bold, Italic, List, ListOrdered, Link, Image, Pilcrow, Heading1, Heading2, Trash2 } from 'lucide-react'; // Added icons
 import { postsAPI } from '../../../../lib/api'; // Adjust path
-// import { Post } from '../../../../lib/data'; // Not directly used here, but keep if needed elsewhere
 
 // --- TipTap Imports ---
 import { useEditor, EditorContent } from '@tiptap/react';
@@ -373,44 +372,34 @@ export default function EditPost() {
     }));
   }, []);
 
+  // ⭐ FIX: Modified uploadImage to send FormData instead of Base64 JSON ⭐
   const uploadImage = async (file: File): Promise<string> => {
     setUploadingImage(true);
     try {
-      const reader = new FileReader();
-      reader.readAsDataURL(file);
+      const formData = new FormData();
+      formData.append('image', file); // 'image' should match the field name in your API (`files.image`)
 
-      return new Promise((resolve, reject) => {
-        reader.onloadend = async () => {
-          try {
-            const base64data = reader.result as string;
-            const response = await fetch('/api/upload-image', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('authToken')}` },
-              body: JSON.stringify({ image: base64data, fileName: file.name }),
-            });
-
-            if (!response.ok) {
-              const errorData = await response.json();
-              throw new Error(errorData.error || 'Image upload failed');
-            }
-
-            const data = await response.json();
-            resolve(data.imageUrl);
-          } catch (uploadError) {
-            console.error('Error during image upload:', uploadError);
-            reject(uploadError);
-          } finally {
-             setUploadingImage(false);
-          }
-        };
-        reader.onerror = error => {
-          console.error('Error reading file:', error);
-          reject(new Error('Failed to read image file.'));
-        };
+      const response = await fetch('/api/upload-image', {
+        method: 'POST',
+        headers: {
+          // 'Content-Type': 'multipart/form-data', // Fetch handles this automatically for FormData
+          Authorization: `Bearer ${localStorage.getItem('authToken')}`
+        },
+        body: formData, // Send FormData directly
       });
-    } catch (error) {
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Image upload failed');
+      }
+
+      const data = await response.json();
+      return data.imageUrl;
+    } catch (uploadError: any) {
+      console.error('Error during image upload:', uploadError);
+      throw new Error(uploadError.message || 'Failed to upload image.');
+    } finally {
       setUploadingImage(false);
-      throw error;
     }
   };
 
@@ -597,6 +586,7 @@ export default function EditPost() {
             )}
             <div className="prose max-w-none">
               {formData.content ? (
+                // Render HTML content for preview
                 <div dangerouslySetInnerHTML={{ __html: formData.content }} />
               ) : (
                 <p className="text-gray-400 italic">No content yet...</p>
@@ -758,6 +748,34 @@ export default function EditPost() {
                   rows={3}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-800"
                   placeholder="Brief summary of the post..."
+                />
+              </div>
+
+              <div className="mt-6">
+                <label htmlFor="seoTitle" className="block text-sm font-medium text-gray-700 mb-2">
+                  SEO Title
+                </label>
+                <input
+                  type="text"
+                  name="seoTitle"
+                  value={formData.seoTitle || ''}
+                  onChange={handleInputChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-800"
+                  placeholder="SEO friendly title..."
+                />
+              </div>
+
+              <div className="mt-6">
+                <label htmlFor="seoDescription" className="block text-sm font-medium text-gray-700 mb-2">
+                  SEO Description
+                </label>
+                <textarea
+                  name="seoDescription"
+                  value={formData.seoDescription || ''}
+                  onChange={handleInputChange}
+                  rows={3}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-800"
+                  placeholder="Meta description for search engines..."
                 />
               </div>
 
