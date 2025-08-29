@@ -94,42 +94,6 @@ export function MainContent() {
               </p>
             </div>
 
-            {/* Social Share */}
-            <div className="flex items-center justify-between pt-6 border-t border-gray-200">
-              <div className="flex items-center space-x-4">
-                <span className="text-sm text-gray-500">
-                  Share this article:
-                </span>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="text-blue-600 hover:bg-blue-50"
-                >
-                  <Facebook className="w-4 h-4" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="text-blue-400 hover:bg-blue-50"
-                >
-                  <Twitter className="w-4 h-4" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="text-blue-700 hover:bg-blue-50"
-                >
-                  <Linkedin className="w-4 h-4" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="text-gray-600 hover:bg-gray-50"
-                >
-                  <Share2 className="w-4 h-4" />
-                </Button>
-              </div>
-            </div>
           </article>
         </div>
 

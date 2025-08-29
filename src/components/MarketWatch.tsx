@@ -1,9 +1,9 @@
 // src/components/MarketWatch.tsx
 
 import { TrendingUp, TrendingDown, Clock } from 'lucide-react';
-import Link from 'next/link'; // Import Link
-import { allPosts, MarketUpdate } from '../data/posts'; // Import allPosts and MarketUpdate type
-
+import Link from 'next/link';
+import { useEffect, useState } from 'react';
+import { getPostsByType } from '../lib/data';
 
 export function MarketWatch() {
   const marketData = [
@@ -13,8 +13,19 @@ export function MarketWatch() {
     { name: "Gold Price", price: "8,500 ETB/oz", change: "+2.1%", trend: "up" }
   ];
 
-  // Filter allPosts to get market update articles and limit to 2 for this section
-  const marketWatchArticles = allPosts.filter(post => post.type === 'marketUpdate').slice(0, 2) as MarketUpdate[];
+  const [marketWatchArticles, setMarketWatchArticles] = useState<any[]>([]);
+
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const posts = await getPostsByType('marketUpdate');
+        setMarketWatchArticles(posts.slice(0, 2));
+      } catch (e) {
+        setMarketWatchArticles([]);
+      }
+    };
+    load();
+  }, []);
 
   return (
     <section className="bg-white py-12">
@@ -53,7 +64,7 @@ export function MarketWatch() {
           {/* Market Articles */}
           <div className="lg:col-span-2">
             <div className="grid md:grid-cols-2 gap-6">
-              {marketWatchArticles.map((article, index) => ( // Using marketWatchArticles here
+              {marketWatchArticles.map((article, index) => (
                 <Link key={index} href={`/posts/${article.slug}`} passHref>
                   <article className="group cursor-pointer">
                     <div className="relative mb-4">
@@ -68,7 +79,7 @@ export function MarketWatch() {
                     </h3>
                     <div className="flex items-center text-sm text-gray-500">
                       <Clock className="w-4 h-4 mr-1" />
-                      <span>{article.readTime}</span> {/* Changed from timeAgo to readTime */}
+                      <span>{article.readTime}</span>
                     </div>
                   </article>
                 </Link>

@@ -2,30 +2,60 @@
 
 import { useRouter } from "next/router";
 import Link from "next/link";
-import React from "react";
-import { ArrowLeft, Clock, Eye, User, Calendar, Tag, BarChart2, MessageSquare } from "lucide-react"; // Removed BookOpen as it wasn't explicitly used
+import React, { useEffect, useState } from "react";
+import { ArrowLeft, Clock, Eye, User, Calendar, Tag, BarChart2, MessageSquare } from "lucide-react";
 import { Card, CardContent } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { Badge } from '../../components/ui/badge';
 import { ImageWithFallback } from "../../components/figma/ImageWithFallback";
 import { Footer } from "../../components/Footer";
 import { Header } from "../../components/Header";
-// Import createSlug, allPosts, and all Post types from the new shared data file
-import { allPosts, FeaturedArticle, MarketUpdate, OpinionPiece } from '../../data/posts';
-
+import { getPostBySlug } from '../../lib/data';
 
 const PostDetailPage = () => {
   const router = useRouter();
   const { slug } = router.query;
+  const [post, setPost] = useState<any | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  const post = allPosts.find(p => p.slug === slug);
+  useEffect(() => {
+    const loadPost = async () => {
+      if (!slug || typeof slug !== 'string') return;
+      try {
+        const fetchedPost = await getPostBySlug(slug);
+        setPost(fetchedPost);
+      } catch (error) {
+        console.error('Failed to load post:', error);
+        setPost(null);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  if (router.isFallback || !post) {
+    loadPost();
+  }, [slug]);
+
+  if (router.isFallback || loading) {
     return (
       <div className="min-h-screen bg-gray-50">
         <Header />
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-          <p className="text-gray-700 text-center text-lg">Loading post or post not found...</p>
+          <p className="text-gray-700 text-center text-lg">Loading post...</p>
+        </div>
+        <Footer />
+      </div>
+    );
+  }
+
+  if (!post) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <Header />
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 text-center">
+          <p className="text-gray-700 text-lg mb-6">Post not found.</p>
+          <Link href="/" passHref>
+            <Button className="bg-yellow-500 hover:bg-yellow-600 text-gray-900">Back to Homepage</Button>
+          </Link>
         </div>
         <Footer />
       </div>
@@ -87,7 +117,7 @@ const PostDetailPage = () => {
               <span className="flex items-center space-x-2 font-semibold text-gray-800">
                 <User className="h-4 w-4 text-gray-500" />
                 <span>{post.author}</span>
-                {(post.type === 'opinionPiece' && post.authorTitle) && (
+                {post.authorTitle && (
                     <span className="text-gray-500">, {post.authorTitle}</span>
                 )}
               </span>
@@ -97,13 +127,13 @@ const PostDetailPage = () => {
               </span>
               <span className="flex items-center space-x-2">
                 <Eye className="h-4 w-4 text-gray-500" />
-                <span>{post.views.toLocaleString()} views</span>
+                <span>{(post.views || 0).toLocaleString()} views</span>
               </span>
               <span className="flex items-center space-x-2">
                 <Calendar className="h-4 w-4 text-gray-500" />
-                <span>Published: {post.publishDate}</span>
+                <span>Published: {post.publishDate ? new Date(post.publishDate as any).toLocaleDateString() : ''}</span>
               </span>
-              {(post.type === 'opinionPiece' && post.commentsCount !== undefined) && (
+              {post.commentsCount !== undefined && (
                 <span className="flex items-center space-x-2">
                   <MessageSquare className="h-4 w-4 text-gray-500" />
                   <span>{post.commentsCount} comments</span>
@@ -112,8 +142,7 @@ const PostDetailPage = () => {
             </div>
           </div>
 
-          {/* Conditional Content for Market Updates */}
-          {(post.type === 'marketUpdate' && post.marketImpact) && (
+          {post.type === 'marketUpdate' && post.marketImpact && (
             <Card className="bg-yellow-50 border-yellow-200 shadow-sm p-6">
               <h3 className="text-xl font-bold text-gray-900 mb-3 flex items-center">
                 <BarChart2 className="h-5 w-5 mr-2 text-yellow-600" /> Market Impact
@@ -121,7 +150,7 @@ const PostDetailPage = () => {
               <p className="text-base text-gray-700 mb-4">{post.marketImpact}</p>
               {post.dataPoints && (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {post.dataPoints.map((data, i) => (
+                  {post.dataPoints.map((data: any, i: number) => (
                     <div key={i} className="flex justify-between items-center bg-white p-3 rounded-lg shadow-sm">
                       <span className="text-sm font-medium text-gray-600">{data.label}:</span>
                       <span className="text-base font-semibold text-gray-800">{data.value}</span>
@@ -132,10 +161,9 @@ const PostDetailPage = () => {
             </Card>
           )}
 
-          {/* Tags for Featured Articles */}
-          {(post.type === 'featuredArticle' && post.tags && post.tags.length > 0) && (
+          {post.type === 'featuredArticle' && post.tags && post.tags.length > 0 && (
             <div className="flex flex-wrap gap-2 mt-4">
-              {post.tags.map((tag, i) => (
+              {post.tags.map((tag: string, i: number) => (
                 <Badge key={i} className="bg-gray-200 text-gray-800 text-sm font-medium px-3 py-1.5 rounded-full">
                   <Tag className="h-3 w-3 mr-1 text-gray-600"/>{tag}
                 </Badge>
@@ -143,9 +171,8 @@ const PostDetailPage = () => {
             </div>
           )}
 
-          {/* Full Content */}
           <div className="prose prose-lg max-w-none text-gray-800 leading-relaxed">
-            <div dangerouslySetInnerHTML={{ __html: post.fullContent }} />
+            <div dangerouslySetInnerHTML={{ __html: post.fullContent || '' }} />
           </div>
 
           <div className="text-center mt-12">

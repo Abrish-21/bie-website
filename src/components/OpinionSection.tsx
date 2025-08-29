@@ -1,26 +1,37 @@
 // src/components/OpinionSection.tsx
 
 import { Clock, User, MessageCircle } from 'lucide-react';
-import Link from 'next/link'; // Import Link
-import { allPosts, OpinionPiece } from '../data/posts'; // Import allPosts and OpinionPiece type
+import Link from 'next/link';
+import { useEffect, useState } from 'react';
+import { getPostsByType } from '../lib/data';
 
 export function OpinionSection() {
-  // Filter allPosts to get opinion pieces and limit to 3 for this section
-  const opinionPieces = allPosts.filter(post => post.type === 'opinionPiece').slice(0, 3) as OpinionPiece[];
+  const [opinionPieces, setOpinionPieces] = useState<any[]>([]);
+
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const posts = await getPostsByType('opinionPiece');
+        setOpinionPieces(posts.slice(0, 3));
+      } catch (e) {
+        setOpinionPieces([]);
+      }
+    };
+    load();
+  }, []);
 
   return (
     <section className="bg-gray-50 py-12">
       <div className="max-w-7xl mx-auto px-4">
         <div className="flex items-center justify-between mb-8">
           <h2 className="text-3xl font-bold text-black">Opinion & Analysis</h2>
-          {/* Updated "All opinions" link to a conceptual /posts page */}
           <Link href="/posts" className="text-red-600 hover:text-red-700 font-medium">
             All opinions →
           </Link>
         </div>
 
         <div className="grid lg:grid-cols-3 gap-8">
-          {opinionPieces.map((opinion, index) => ( // Using opinionPieces here
+          {opinionPieces.map((opinion, index) => (
             <Link key={index} href={`/posts/${opinion.slug}`} passHref>
               <article className="bg-white rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow group cursor-pointer">
                 <div className="relative">
@@ -46,22 +57,21 @@ export function OpinionSection() {
 
                   <div className="flex items-center justify-between">
                     <div className="flex items-center">
-                      {/* Placeholder for author image - you might add this later */}
                       <div className="w-10 h-10 bg-gray-300 rounded-full mr-3"></div>
                       <div>
                         <div className="font-medium text-black text-sm">{opinion.author}</div>
-                        <div className="text-xs text-gray-500">{opinion.authorTitle}</div> {/* Using authorTitle */}
+                        <div className="text-xs text-gray-500">{opinion.authorTitle}</div>
                       </div>
                     </div>
 
                     <div className="flex items-center text-xs text-gray-500 space-x-4">
                       <div className="flex items-center">
                         <Clock className="w-3 h-3 mr-1" />
-                        <span>{opinion.readTime}</span> {/* Changed from timeAgo to readTime */}
+                        <span>{opinion.readTime}</span>
                       </div>
                       <div className="flex items-center">
                         <MessageCircle className="w-3 h-3 mr-1" />
-                        <span>{opinion.commentsCount}</span> {/* Changed from comments to commentsCount */}
+                        <span>{opinion.commentsCount}</span>
                       </div>
                     </div>
                   </div>
