@@ -7,22 +7,55 @@ import { ArrowLeft, Clock, Eye, User, Calendar, Tag, BarChart2, MessageSquare } 
 import { Card, CardContent } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { Badge } from '../../components/ui/badge';
-import { ImageWithFallback } from "../../components/figma/ImageWithFallback";
+// ⭐ FIX: Removed import for ImageWithFallback as we're implementing its logic directly
+// import { ImageWithFallback } from "../../components/figma/ImageWithFallback";
 import { Footer } from "../../components/Footer";
 import { Header } from "../../components/Header";
 import { getPostBySlug } from '../../lib/data';
 
+// Define a more robust Post interface to reflect what's stored and used
+interface PostData {
+  _id: string; // Assuming an ID field
+  title: string;
+  excerpt?: string;
+  content?: string; // Made content optional to match potential 'string | undefined' from getPostBySlug
+  fullContent?: string; // Often a duplicate of 'content' from TipTap
+  imageUrl?: string; // The URL for the featured image
+  category: string;
+  type: 'featured' | 'market-watch' | 'opinion' | 'latest' | 'exclusive' | 'analysis' | string; // Ensure type flexibility
+  tags?: string[];
+  isDraft?: boolean;
+  seoTitle?: string;
+  seoDescription?: string;
+  slug: string;
+  author: string;
+  authorTitle?: string;
+  readTime?: string; // Changed from number | string to just string for consistency in display
+  views?: number;
+  publishDate?: string; // Assuming date is stored as a string
+  commentsCount?: number;
+  marketImpact?: string;
+  dataPoints?: { label: string; value: string | number }[]; // For marketUpdate posts
+}
+
+// ⭐ FIX: Removed the local ImageWithFallbackProps interface as it's no longer needed.
+
+
 const PostDetailPage = () => {
   const router = useRouter();
   const { slug } = router.query;
-  const [post, setPost] = useState<any | null>(null);
+  const [post, setPost] = useState<PostData | null>(null); // Use PostData interface
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const loadPost = async () => {
-      if (!slug || typeof slug !== 'string') return;
+      if (!slug || typeof slug !== 'string') {
+        setLoading(false); // Stop loading if slug is not valid
+        return;
+      }
       try {
-        const fetchedPost = await getPostBySlug(slug);
+        // ⭐ FIX: Cast fetchedPost to PostData to satisfy TypeScript
+        const fetchedPost = (await getPostBySlug(slug)) as PostData;
         setPost(fetchedPost);
       } catch (error) {
         console.error('Failed to load post:', error);
@@ -35,12 +68,15 @@ const PostDetailPage = () => {
     loadPost();
   }, [slug]);
 
-  if (router.isFallback || loading) {
+  if (loading) { // Simplified loading check
     return (
-      <div className="min-h-screen bg-gray-50">
+      <div className="min-h-screen bg-gray-50 flex flex-col">
         <Header />
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-          <p className="text-gray-700 text-center text-lg">Loading post...</p>
+        <div className="flex-grow flex items-center justify-center">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-yellow-600 mx-auto"></div>
+            <p className="mt-4 text-gray-700 text-lg">Loading post...</p>
+          </div>
         </div>
         <Footer />
       </div>
@@ -49,23 +85,30 @@ const PostDetailPage = () => {
 
   if (!post) {
     return (
-      <div className="min-h-screen bg-gray-50">
+      <div className="min-h-screen bg-gray-50 flex flex-col">
         <Header />
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 text-center">
-          <p className="text-gray-700 text-lg mb-6">Post not found.</p>
-          <Link href="/" passHref>
-            <Button className="bg-yellow-500 hover:bg-yellow-600 text-gray-900">Back to Homepage</Button>
-          </Link>
+        <div className="flex-grow flex items-center justify-center max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 text-center">
+          <div className="bg-white p-8 rounded-xl shadow-lg">
+            <p className="text-gray-700 text-lg mb-6">Post not found.</p>
+            <Link href="/" passHref>
+              <Button className="bg-yellow-500 hover:bg-yellow-600 text-gray-900 font-semibold">Back to Homepage</Button>
+            </Link>
+          </div>
         </div>
         <Footer />
       </div>
     );
   }
 
+  // Determine which content field to use (prioritize fullContent if available, else content)
+  const displayContent = post.fullContent || post.content || '';
+  const displayImageUrl = post.imageUrl || "https://placehold.co/1200x400/cccccc/333333?text=No+Image"; // Fallback placeholder
+
+
   return (
-    <div className="bg-gray-50 min-h-screen font-sans text-gray-800">
+    <div className="bg-gray-50 min-h-screen font-sans text-gray-800 flex flex-col">
       <Header />
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12 flex-grow">
         <div className="mb-8">
           <Link href="/" className="inline-flex items-center text-yellow-600 hover:text-yellow-700 transition-colors group">
             <ArrowLeft className="h-4 w-4 mr-2 group-hover:-translate-x-1 transition-transform" />
@@ -84,14 +127,29 @@ const PostDetailPage = () => {
                    Market Update
                  </Badge>
               )}
-              {post.type === 'opinionPiece' && (
+              {post.type === 'opinion' && ( // Corrected from 'opinionPiece' to 'opinion' for consistency
                  <Badge className="bg-purple-600 text-white text-base font-medium px-3 py-1.5 rounded-full">
                    Opinion
                  </Badge>
               )}
-               {post.type === 'featuredArticle' && (
+               {post.type === 'featured' && ( // Corrected from 'featuredArticle' to 'featured' for consistency
                  <Badge className="bg-orange-600 text-white text-base font-medium px-3 py-1.5 rounded-full">
                    Featured Article
+                 </Badge>
+              )}
+               {post.type === 'exclusive' && (
+                 <Badge className="bg-red-600 text-white text-base font-medium px-3 py-1.5 rounded-full">
+                   Exclusive
+                 </Badge>
+              )}
+               {post.type === 'analysis' && (
+                 <Badge className="bg-cyan-600 text-white text-base font-medium px-3 py-1.5 rounded-full">
+                   Analysis
+                 </Badge>
+              )}
+               {post.type === 'latest' && (
+                 <Badge className="bg-gray-600 text-white text-base font-medium px-3 py-1.5 rounded-full">
+                   Latest News
                  </Badge>
               )}
             </div>
@@ -103,11 +161,19 @@ const PostDetailPage = () => {
             </p>
           </div>
 
+          {/* ⭐ FIX: Replaced ImageWithFallback with standard <img> and onError for fallback ⭐ */}
           <figure className="my-8 relative rounded-xl overflow-hidden shadow-md">
-            <ImageWithFallback
-              src={post.imageUrl}
+            <img
+              src={displayImageUrl}
               alt={post.title}
               className="w-full h-[350px] md:h-[450px] object-cover"
+              onError={(e) => {
+                // Only set fallback if the current src is not already the fallback
+                if (e.currentTarget.src !== "https://placehold.co/1200x450/cccccc/333333?text=No+Featured+Image") {
+                  e.currentTarget.src = "https://placehold.co/1200x450/cccccc/333333?text=No+Featured+Image";
+                }
+                e.currentTarget.onerror = null; // Prevent infinite loop if fallback also fails
+              }}
             />
             <figcaption className="sr-only">{post.title}</figcaption>
           </figure>
@@ -123,7 +189,7 @@ const PostDetailPage = () => {
               </span>
               <span className="flex items-center space-x-2">
                 <Clock className="h-4 w-4 text-gray-500" />
-                <span>{post.readTime}</span>
+                <span>{post.readTime || 'N/A'}</span>
               </span>
               <span className="flex items-center space-x-2">
                 <Eye className="h-4 w-4 text-gray-500" />
@@ -131,7 +197,7 @@ const PostDetailPage = () => {
               </span>
               <span className="flex items-center space-x-2">
                 <Calendar className="h-4 w-4 text-gray-500" />
-                <span>Published: {post.publishDate ? new Date(post.publishDate as any).toLocaleDateString() : ''}</span>
+                <span>Published: {post.publishDate ? new Date(post.publishDate).toLocaleDateString() : 'N/A'}</span>
               </span>
               {post.commentsCount !== undefined && (
                 <span className="flex items-center space-x-2">
@@ -153,7 +219,7 @@ const PostDetailPage = () => {
                   {post.dataPoints.map((data: any, i: number) => (
                     <div key={i} className="flex justify-between items-center bg-white p-3 rounded-lg shadow-sm">
                       <span className="text-sm font-medium text-gray-600">{data.label}:</span>
-                      <span className="text-base font-semibold text-gray-800">{data.value}</span>
+                      <span className="base font-semibold text-gray-800">{data.value}</span>
                     </div>
                   ))}
                 </div>
@@ -161,7 +227,7 @@ const PostDetailPage = () => {
             </Card>
           )}
 
-          {post.type === 'featuredArticle' && post.tags && post.tags.length > 0 && (
+          {post.tags && post.tags.length > 0 && (
             <div className="flex flex-wrap gap-2 mt-4">
               {post.tags.map((tag: string, i: number) => (
                 <Badge key={i} className="bg-gray-200 text-gray-800 text-sm font-medium px-3 py-1.5 rounded-full">
@@ -171,8 +237,13 @@ const PostDetailPage = () => {
             </div>
           )}
 
+          {/* ⭐ CRITICAL FIX & IMPROVEMENT: Render HTML content ⭐ */}
           <div className="prose prose-lg max-w-none text-gray-800 leading-relaxed">
-            <div dangerouslySetInnerHTML={{ __html: post.fullContent || '' }} />
+            {displayContent ? (
+              <div dangerouslySetInnerHTML={{ __html: displayContent }} />
+            ) : (
+              <p className="text-gray-500 italic text-center py-6">No detailed content available for this post.</p>
+            )}
           </div>
 
           <div className="text-center mt-12">
