@@ -1,14 +1,16 @@
 // src/pages/admin/posts/new.tsx
 
-import { useState, useEffect, useCallback } from 'react'; // Added useCallback
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/router';
-import dynamic from 'next/dynamic';
-import { ArrowLeft, Save, Eye, UploadCloud } from 'lucide-react'; // Added UploadCloud icon
-import { postsAPI } from '../../../lib/api'; // Using postsAPI for post creation
+import { ArrowLeft, Save, Eye, UploadCloud, Bold, Italic, List, ListOrdered, Link, Image, Pilcrow, Heading1, Heading2 } from 'lucide-react'; // Added TipTap toolbar icons
+import { postsAPI } from '../../../lib/api';
 
-// Dynamically import ReactQuill to avoid SSR issues
-const ReactQuill = dynamic(() => import('react-quill'), { ssr: false });
-import 'react-quill/dist/quill.snow.css'; // Quill editor styles
+// --- TipTap Imports ---
+import { useEditor, EditorContent } from '@tiptap/react';
+import StarterKit from '@tiptap/starter-kit';
+import TiptapLinkExtension from '@tiptap/extension-link'; // Renamed to avoid conflict with lucide-react Link
+import TiptapImageExtension from '@tiptap/extension-image'; // Renamed to avoid conflict with lucide-react Image
+// --- End TipTap Imports ---
 
 // Custom Modal for alerts (replace alert() calls)
 const CustomAlertModal: React.FC<{ message: string; onClose: () => void }> = ({ message, onClose }) => {
@@ -33,7 +35,7 @@ interface PostFormData {
   title: string;
   excerpt: string;
   content: string;
-  imageUrl: string; // This will store the URL from the upload service
+  imageUrl: string;
   category: string;
   type: 'featured' | 'market-watch' | 'opinion' | 'latest' | string;
   tags: string[];
@@ -41,7 +43,7 @@ interface PostFormData {
   readTime: number | string;
   author: string;
   authorId: string;
-  fullContent: string; // To store the HTML from ReactQuill
+  fullContent: string;
 }
 
 const CATEGORIES = [
@@ -56,17 +58,162 @@ const POST_TYPES = [
   { value: 'latest', label: 'Latest News' }
 ];
 
+// TipTap Editor component with toolbar
+const TiptapEditor: React.FC<{ initialContent: string; onContentChange: (html: string) => void }> = ({
+  initialContent,
+  onContentChange,
+}) => {
+  const editor = useEditor({
+    extensions: [
+      StarterKit, // Removed .configure({ history: false }) as it's not a direct config option here
+      TiptapLinkExtension.configure({ // Use renamed extension
+        openOnClick: false,
+        autolink: true,
+      }),
+      TiptapImageExtension.configure({ // Use renamed extension
+        inline: true,
+        allowBase64: true,
+      }),
+    ],
+    content: initialContent,
+    onUpdate: ({ editor }) => {
+      onContentChange(editor.getHTML());
+    },
+    editorProps: {
+      attributes: {
+        class: 'prose max-w-none focus:outline-none min-h-[300px] p-4 text-gray-800',
+      },
+    },
+  });
+
+  const setLink = useCallback(() => {
+    if (!editor) return;
+    const previousUrl = editor.getAttributes('link').href;
+    const url = window.prompt('URL', previousUrl);
+
+    // cancelled
+    if (url === null) {
+      return;
+    }
+
+    // empty
+    if (url === '') {
+      editor.chain().focus().unsetLink().run(); // ⭐ FIX: Changed extendMark to unsetLink
+      return;
+    }
+
+    // update link
+    editor.chain().focus().setLink({ href: url }).run(); // ⭐ FIX: Changed extendMark to setLink
+  }, [editor]);
+
+  // Handle image insertion (e.g., from a URL)
+  const addImage = useCallback(() => {
+    if (!editor) return;
+    const url = window.prompt('URL');
+    if (url) {
+      editor.chain().focus().setImage({ src: url }).run();
+    }
+  }, [editor]);
+
+  if (!editor) {
+    return null;
+  }
+
+  return (
+    <div className="border border-gray-300 rounded-lg overflow-hidden">
+      <div className="flex flex-wrap items-center p-2 bg-gray-50 border-b border-gray-200 gap-1">
+        <button
+          type="button"
+          onClick={() => editor.chain().focus().toggleBold().run()}
+          disabled={!editor.can().chain().focus().toggleBold().run()}
+          className={`p-2 rounded ${editor.isActive('bold') ? 'bg-blue-200' : 'hover:bg-gray-200'}`}
+          title="Bold"
+        >
+          <Bold className="h-4 w-4 text-gray-700" />
+        </button>
+        <button
+          type="button"
+          onClick={() => editor.chain().focus().toggleItalic().run()}
+          disabled={!editor.can().chain().focus().toggleItalic().run()}
+          className={`p-2 rounded ${editor.isActive('italic') ? 'bg-blue-200' : 'hover:bg-gray-200'}`}
+          title="Italic"
+        >
+          <Italic className="h-4 w-4 text-gray-700" />
+        </button>
+        <button
+          type="button"
+          onClick={() => editor.chain().focus().toggleBulletList().run()}
+          className={`p-2 rounded ${editor.isActive('bulletList') ? 'bg-blue-200' : 'hover:bg-gray-200'}`}
+          title="Bullet List"
+        >
+          <List className="h-4 w-4 text-gray-700" />
+        </button>
+        <button
+          type="button"
+          onClick={() => editor.chain().focus().toggleOrderedList().run()}
+          className={`p-2 rounded ${editor.isActive('orderedList') ? 'bg-blue-200' : 'hover:bg-gray-200'}`}
+          title="Ordered List"
+        >
+          <ListOrdered className="h-4 w-4 text-gray-700" />
+        </button>
+        <button
+          type="button"
+          onClick={() => editor.chain().focus().setParagraph().run()}
+          className={`p-2 rounded ${editor.isActive('paragraph') ? 'bg-blue-200' : 'hover:bg-gray-200'}`}
+          title="Paragraph"
+        >
+          <Pilcrow className="h-4 w-4 text-gray-700" />
+        </button>
+        <button
+          type="button"
+          onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}
+          className={`p-2 rounded ${editor.isActive('heading', { level: 1 }) ? 'bg-blue-200' : 'hover:bg-gray-200'}`}
+          title="Heading 1"
+        >
+          <Heading1 className="h-4 w-4 text-gray-700" />
+        </button>
+        <button
+          type="button"
+          onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
+          className={`p-2 rounded ${editor.isActive('heading', { level: 2 }) ? 'bg-blue-200' : 'hover:bg-gray-200'}`}
+          title="Heading 2"
+        >
+          <Heading2 className="h-4 w-4 text-gray-700" />
+        </button>
+        <button
+          type="button"
+          onClick={setLink}
+          className={`p-2 rounded ${editor.isActive('link') ? 'bg-blue-200' : 'hover:bg-gray-200'}`}
+          title="Set Link"
+        >
+          <Link className="h-4 w-4 text-gray-700" />
+        </button>
+        <button
+          type="button"
+          onClick={addImage}
+          className="p-2 rounded hover:bg-gray-200"
+          title="Add Image by URL"
+        >
+          <Image className="h-4 w-4 text-gray-700" />
+        </button>
+      </div>
+      <EditorContent editor={editor} className="tiptap-editor-content" />
+    </div>
+  );
+};
+
+
 export default function NewPost() {
   const router = useRouter();
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(false);
-  const [uploadingImage, setUploadingImage] = useState(false); // New state for image upload status
+  const [uploadingImage, setUploadingImage] = useState(false);
   const [previewMode, setPreviewMode] = useState(false);
   const [formData, setFormData] = useState<PostFormData>({
     title: '',
     excerpt: '',
     content: '',
-    imageUrl: '', // Initialize imageUrl to empty string
+    imageUrl: '',
     category: 'Business',
     type: 'latest',
     tags: [],
@@ -74,14 +221,13 @@ export default function NewPost() {
     readTime: '',
     author: '',
     authorId: '',
-    fullContent: '',
+    fullContent: '', // HTML content from TipTap
   });
   const [tagInput, setTagInput] = useState('');
   const [alertMessage, setAlertMessage] = useState<string | null>(null);
-  const [selectedImageFile, setSelectedImageFile] = useState<File | null>(null); // State for selected file object
-  const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null); // State for local image preview
+  const [selectedImageFile, setSelectedImageFile] = useState<File | null>(null);
+  const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);
 
-  // Effect to load user data from localStorage
   useEffect(() => {
     const token = localStorage.getItem('authToken');
     const userData = localStorage.getItem('user');
@@ -105,10 +251,8 @@ export default function NewPost() {
     }
   }, [router]);
 
-  // Handler for all standard input fields (text, select, number, checkbox, radio)
   const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value, type } = e.target;
-    // ⭐ FIX: Safely access 'checked' only for checkbox/radio input types
     const newValue = (e.target as HTMLInputElement).type === 'checkbox' || (e.target as HTMLInputElement).type === 'radio'
       ? (e.target as HTMLInputElement).checked
       : value;
@@ -119,23 +263,20 @@ export default function NewPost() {
     }));
   }, []);
 
-  // Handler for ReactQuill content
-  const handleQuillChange = useCallback((value: string) => {
+  // Updated handler for TipTap content (renamed from handleQuillChange)
+  const handleEditorContentChange = useCallback((html: string) => {
     setFormData((prev) => ({
       ...prev,
-      content: value, // Store HTML from Quill
-      fullContent: value, // Also store in fullContent
+      content: html, // Store HTML from TipTap
+      fullContent: html, // Also store in fullContent
     }));
   }, []);
 
-  // Handler for file input change
   const handleFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
       setSelectedImageFile(file);
-      // Create a local URL for image preview
       setImagePreviewUrl(URL.createObjectURL(file));
-      // Clear any previous imageUrl if a new file is selected
       setFormData(prev => ({ ...prev, imageUrl: '' }));
     } else {
       setSelectedImageFile(null);
@@ -163,7 +304,6 @@ export default function NewPost() {
   const uploadImage = async (file: File): Promise<string> => {
     setUploadingImage(true);
     try {
-      // Convert file to Base64
       const reader = new FileReader();
       reader.readAsDataURL(file);
 
@@ -171,10 +311,9 @@ export default function NewPost() {
         reader.onloadend = async () => {
           try {
             const base64data = reader.result as string;
-            // Send Base64 to your API endpoint
             const response = await fetch('/api/upload-image', {
               method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
+              headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('authToken')}` },
               body: JSON.stringify({ image: base64data, fileName: file.name }),
             });
 
@@ -184,12 +323,12 @@ export default function NewPost() {
             }
 
             const data = await response.json();
-            resolve(data.imageUrl); // API should return the hosted image URL
+            resolve(data.imageUrl);
           } catch (uploadError) {
             console.error('Error during image upload:', uploadError);
             reject(uploadError);
           } finally {
-             setUploadingImage(false); // Ensure loading state is reset
+             setUploadingImage(false);
           }
         };
         reader.onerror = error => {
@@ -199,42 +338,37 @@ export default function NewPost() {
       });
     } catch (error) {
       setUploadingImage(false);
-      throw error; // Re-throw to be caught by handleSubmit
+      throw error;
     }
   };
-
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setAlertMessage(null);
 
-    // Basic validation before submitting
     if (!formData.title || !formData.content || !formData.category || !formData.type || !formData.readTime) {
         setAlertMessage('Please fill in all required fields: Title, Content, Category, Type, and Read Time.');
         setLoading(false);
         return;
     }
-    // Validate that either a file is selected or an imageUrl is provided
     if (!selectedImageFile && !formData.imageUrl) {
         setAlertMessage('Please either select an image file or provide an Image URL.');
         setLoading(false);
         return;
     }
 
-    let finalImageUrl = formData.imageUrl; // Start with existing/pasted URL
+    let finalImageUrl = formData.imageUrl;
     try {
       if (selectedImageFile) {
-        // Only upload if a new file is selected
         finalImageUrl = await uploadImage(selectedImageFile);
       } else if (!finalImageUrl) {
-        // If no file and no existing URL, this should ideally be caught by previous validation
         throw new Error('No image provided.');
       }
 
       const postData = {
         ...formData,
-        imageUrl: finalImageUrl, // Use the uploaded URL or the existing one
+        imageUrl: finalImageUrl,
         author: formData.author || (user?.role === 'superadmin' ? 'Super Admin' : 'Content Admin'),
         authorId: formData.authorId || user?._id,
         slug: formData.title.toLowerCase()
@@ -250,7 +384,7 @@ export default function NewPost() {
       setAlertMessage(error.message || 'Failed to create post');
     } finally {
       setLoading(false);
-      setUploadingImage(false); // Reset image upload status
+      setUploadingImage(false);
     }
   };
 
@@ -264,24 +398,6 @@ export default function NewPost() {
       </div>
     );
   }
-
-  const quillModules = {
-    toolbar: [
-      [{ 'header': '1' }, { 'header': '2' }, { 'font': [] }],
-      [{ size: [] }],
-      ['bold', 'italic', 'underline', 'strike', 'blockquote'],
-      [{ 'list': 'ordered' }, { 'list': 'bullet' }, { 'indent': '-1' }, { 'indent': '+1' }],
-      ['link', 'image', 'video'],
-      ['clean']
-    ],
-  };
-
-  const quillFormats = [
-    'header', 'font', 'size',
-    'bold', 'italic', 'underline', 'strike', 'blockquote',
-    'list', 'bullet', 'indent',
-    'link', 'image', 'video'
-  ];
 
   const currentImageSource = imagePreviewUrl || formData.imageUrl;
 
@@ -365,6 +481,7 @@ export default function NewPost() {
             )}
             <div className="prose max-w-none">
               {formData.content ? (
+                // Render HTML content for preview
                 <div dangerouslySetInnerHTML={{ __html: formData.content }} />
               ) : (
                 <p className="text-gray-400 italic">No content yet...</p>
@@ -385,7 +502,7 @@ export default function NewPost() {
                     name="title"
                       value={formData.title}
                       onChange={handleInputChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-800"
                     placeholder="Enter post title..."
                     />
                   </div>
@@ -399,7 +516,7 @@ export default function NewPost() {
                     name="category"
                       value={formData.category}
                       onChange={handleInputChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-800"
                     >
                       {CATEGORIES.map(category => (
                         <option key={category} value={category}>{category}</option>
@@ -416,7 +533,7 @@ export default function NewPost() {
                     name="type"
                     value={formData.type}
                     onChange={handleInputChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-800"
                   >
                     {POST_TYPES.map(type => (
                       <option key={type.value} value={type.value}>{type.label}</option>
@@ -434,7 +551,7 @@ export default function NewPost() {
                     name="readTime"
                     value={formData.readTime}
                     onChange={handleInputChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-800"
                     placeholder="Estimated read time..."
                   />
                 </div>
@@ -452,7 +569,7 @@ export default function NewPost() {
                         onChange={() => setFormData(prev => ({ ...prev, isDraft: false }))}
                         className="mr-2"
                       />
-                      <span className="text-sm">Publish</span>
+                      <span className="text-sm text-gray-800">Publish</span>
                     </label>
                     <label className="flex items-center">
                       <input
@@ -462,12 +579,11 @@ export default function NewPost() {
                         onChange={() => setFormData(prev => ({ ...prev, isDraft: true }))}
                         className="mr-2"
                       />
-                      <span className="text-sm">Save as Draft</span>
+                      <span className="text-sm text-gray-800">Save as Draft</span>
                     </label>
                   </div>
                 </div>
 
-                {/* ⭐ CRITICAL FIX: Image Upload/URL Input Combined ⭐ */}
                 <div>
                   <label htmlFor="imageUpload" className="block text-sm font-medium text-gray-700 mb-2">Featured Image</label>
                   <div className="flex items-center space-x-2 mb-2">
@@ -476,7 +592,7 @@ export default function NewPost() {
                           id="imageUpload"
                           accept="image/*"
                           onChange={handleFileChange}
-                          className="hidden" // Hide default file input
+                          className="hidden"
                       />
                       <label
                           htmlFor="imageUpload"
@@ -492,26 +608,26 @@ export default function NewPost() {
                           value={formData.imageUrl}
                           onChange={handleInputChange}
                           placeholder="Paste Image URL"
-                          className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                          disabled={!!selectedImageFile} // Disable if file is selected
+                          className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-800"
+                          disabled={!!selectedImageFile}
                       />
                   </div>
                   {(imagePreviewUrl || formData.imageUrl) && (
                     <div className="mt-2">
                         <img
-                          src={imagePreviewUrl || formData.imageUrl}
+                          src={currentImageSource}
                           alt="Image Preview"
                           className="max-w-full h-32 object-cover rounded-md"
                           onError={(e) => { e.currentTarget.src = "https://placehold.co/300x128/cccccc/333333?text=Invalid+URL"; e.currentTarget.onerror = null; }}
                         />
                         {selectedImageFile && (
-                            <p className="text-xs text-gray-500 mt-1">
+                            <p className="text-xs text-gray-500 mt-1 text-gray-800">
                                 Selected: {selectedImageFile.name} ({(selectedImageFile.size / 1024).toFixed(2)} KB)
                             </p>
                         )}
                     </div>
                   )}
-                  {uploadingImage && <p className="text-blue-600 text-sm mt-2">Uploading image...</p>}
+                  {uploadingImage && <p className="text-blue-600 text-sm mt-2 text-gray-800">Uploading image...</p>}
                 </div>
 
               </div>
@@ -525,13 +641,13 @@ export default function NewPost() {
                   value={formData.excerpt}
                   onChange={handleInputChange}
                   rows={3}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-800"
                   placeholder="Brief summary of the post..."
                 />
               </div>
 
               <div className="mt-6">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label htmlFor="tags" className="block text-sm font-medium text-gray-700 mb-2">
                   Tags
                 </label>
                 <div className="flex items-center space-x-2 mb-3">
@@ -540,7 +656,7 @@ export default function NewPost() {
                     value={tagInput}
                     onChange={(e) => setTagInput(e.target.value)}
                     onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddTag())}
-                    className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-800"
                     placeholder="Add a tag and press Enter..."
                   />
                   <button
@@ -576,20 +692,15 @@ export default function NewPost() {
                     <label htmlFor="content" className="block text-sm font-medium text-gray-700 mb-2">
                   Content *
                     </label>
-                    <ReactQuill
-                      theme="snow"
-                      value={formData.content}
-                      onChange={handleQuillChange}
-                      modules={quillModules}
-                      formats={quillFormats}
-                      className="bg-white rounded-md shadow-sm"
-                      placeholder="Write your post content here..."
+                    <TiptapEditor
+                      initialContent={formData.content}
+                      onContentChange={handleEditorContentChange}
                     />
                     </div>
                   </div>
-          </form>
-        )}
-      </div>
-    </div>
-  );
-}
+              </form>
+            )}
+          </div>
+        </div>
+      );
+    }
