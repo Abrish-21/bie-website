@@ -1,289 +1,519 @@
-import { useState, useEffect, useRef, useMemo } from 'react';
+// src/pages/admin/posts/edit/[id].tsx
+
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/router';
-import dynamic from 'next/dynamic';
-import Head from 'next/head';
-import { ArrowLeft, Save, Eye, BellRing, Info, Upload, Trash2 } from 'lucide-react';
-import { postsAPI } from '../../../../lib/api';
+import { ArrowLeft, Save, Eye, UploadCloud, Bold, Italic, List, ListOrdered, Link, Image, Pilcrow, Heading1, Heading2, Trash2 } from 'lucide-react'; // Added icons
+import { postsAPI } from '../../../../lib/api'; // Adjust path
+// import { Post } from '../../../../lib/data'; // Not directly used here, but keep if needed elsewhere
 
-// Dynamically import ReactQuill to avoid SSR issues
-// This requires 'react-quill' and 'quill' to be installed: npm install react-quill quill@^1.3.6
-const ReactQuill = dynamic(() => import('react-quill'), { ssr: false });
-import 'react-quill/dist/quill.snow.css'; // Quill editor styles
+// --- TipTap Imports ---
+import { useEditor, EditorContent } from '@tiptap/react';
+import StarterKit from '@tiptap/starter-kit';
+import TiptapLinkExtension from '@tiptap/extension-link'; // Renamed to avoid conflict with lucide-react Link
+import TiptapImageExtension from '@tiptap/extension-image'; // Renamed to avoid conflict with lucide-react Image
+// --- End TipTap Imports ---
 
+// Custom Modal for alerts (replace alert() calls)
+const CustomAlertModal: React.FC<{ message: string; onClose: () => void }> = ({ message, onClose }) => {
+  return (
+    <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-white p-6 rounded-lg shadow-xl max-w-sm w-full">
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">Error</h3>
+        <p className="text-gray-700 mb-6">{message}</p>
+        <button
+          onClick={onClose}
+          className="w-full px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+        >
+          Close
+        </button>
+      </div>
+    </div>
+  );
+};
+
+const ConfirmationModal: React.FC<{ message: string; onConfirm: () => void; onCancel: () => void }> = ({ message, onConfirm, onCancel }) => {
+  return (
+    <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-white p-6 rounded-lg shadow-xl max-w-sm w-full">
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">Confirm Action</h3>
+        <p className="text-gray-700 mb-6">{message}</p>
+        <div className="flex justify-end space-x-4">
+          <button
+            onClick={onCancel}
+            className="px-4 py-2 bg-gray-300 text-gray-800 rounded-md hover:bg-gray-400 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={onConfirm}
+            className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+          >
+            Confirm
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+
+// Interface for Post form data (ensure it matches the backend and new.tsx)
 interface PostFormData {
   title: string;
   excerpt: string;
-  content: string; // Content now stores HTML from the rich text editor
+  content: string; // Will store HTML from TipTap
+  imageUrl: string;
   category: string;
-  type: 'featured' | 'market-watch' | 'opinion' | 'latest' | 'exclusive' | 'analysis'; // Updated types
+  type: 'featured' | 'market-watch' | 'opinion' | 'latest' | string;
   tags: string[];
   isDraft: boolean;
-  seoTitle?: string;
-  seoDescription?: string;
-  slug: string; // Added slug property, was missing
-}
-
-interface UserData {
-  _id: string;
-  name: string;
-  email: string;
-  role: string;
+  readTime: number | string;
+  author: string;
+  authorId: string;
+  fullContent: string; // Also stores HTML content
+  seoTitle?: string; // Added back for completeness if your backend handles it
+  seoDescription?: string; // Added back for completeness if your backend handles it
+  slug: string; // Added for completeness if your backend handles it
 }
 
 const CATEGORIES = [
-  'Business', 'Economy', 'Technology', 'Politics', 'Agriculture',
-  'Manufacturing', 'Services', 'Finance', 'Real Estate', 'Tourism',
-  'Education', 'Healthcare', 'Energy', 'Global Markets'
+  'Business', 'Economy', 'Technology', 'Politics', 'Agriculture', 'Manufacturing',
+  'Services', 'Finance', 'Real Estate', 'Tourism', 'Education', 'Healthcare'
 ];
 
 const POST_TYPES = [
   { value: 'featured', label: 'Featured Article' },
   { value: 'market-watch', label: 'Market Watch' },
   { value: 'opinion', label: 'Opinion Piece' },
-  { value: 'latest', label: 'Latest News' },
-  { value: 'exclusive', label: 'Exclusive Report' },
-  { value: 'analysis', label: 'In-Depth Analysis' }
+  { value: 'latest', label: 'Latest News' }
 ];
+
+// TipTap Editor component with toolbar
+const TiptapEditor: React.FC<{ initialContent: string; onContentChange: (html: string) => void }> = ({
+  initialContent,
+  onContentChange,
+}) => {
+  const editor = useEditor({
+    extensions: [
+      StarterKit,
+      TiptapLinkExtension.configure({
+        openOnClick: false,
+        autolink: true,
+      }),
+      TiptapImageExtension.configure({
+        inline: true,
+        allowBase64: true,
+      }),
+    ],
+    content: initialContent,
+    onUpdate: ({ editor }) => {
+      onContentChange(editor.getHTML());
+    },
+    editorProps: {
+      attributes: {
+        class: 'prose max-w-none focus:outline-none min-h-[300px] p-4 text-gray-800',
+      },
+    },
+  });
+
+  const setLink = useCallback(() => {
+    if (!editor) return;
+    const previousUrl = editor.getAttributes('link').href;
+    const url = window.prompt('URL', previousUrl);
+
+    if (url === null) {
+      return;
+    }
+
+    if (url === '') {
+      editor.chain().focus().unsetLink().run();
+      return;
+    }
+
+    editor.chain().focus().setLink({ href: url }).run();
+  }, [editor]);
+
+  const addImage = useCallback(() => {
+    if (!editor) return;
+    const url = window.prompt('URL');
+    if (url) {
+      editor.chain().focus().setImage({ src: url }).run();
+    }
+  }, [editor]);
+
+  if (!editor) {
+    return null;
+  }
+
+  return (
+    <div className="border border-gray-300 rounded-lg overflow-hidden">
+      <div className="flex flex-wrap items-center p-2 bg-gray-50 border-b border-gray-200 gap-1">
+        <button
+          type="button"
+          onClick={() => editor.chain().focus().toggleBold().run()}
+          disabled={!editor.can().chain().focus().toggleBold().run()}
+          className={`p-2 rounded ${editor.isActive('bold') ? 'bg-blue-200' : 'hover:bg-gray-200'}`}
+          title="Bold"
+        >
+          <Bold className="h-4 w-4 text-gray-700" />
+        </button>
+        <button
+          type="button"
+          onClick={() => editor.chain().focus().toggleItalic().run()}
+          disabled={!editor.can().chain().focus().toggleItalic().run()}
+          className={`p-2 rounded ${editor.isActive('italic') ? 'bg-blue-200' : 'hover:bg-gray-200'}`}
+          title="Italic"
+        >
+          <Italic className="h-4 w-4 text-gray-700" />
+        </button>
+        <button
+          type="button"
+          onClick={() => editor.chain().focus().toggleBulletList().run()}
+          className={`p-2 rounded ${editor.isActive('bulletList') ? 'bg-blue-200' : 'hover:bg-gray-200'}`}
+          title="Bullet List"
+        >
+          <List className="h-4 w-4 text-gray-700" />
+        </button>
+        <button
+          type="button"
+          onClick={() => editor.chain().focus().toggleOrderedList().run()}
+          className={`p-2 rounded ${editor.isActive('orderedList') ? 'bg-blue-200' : 'hover:bg-gray-200'}`}
+          title="Ordered List"
+        >
+          <ListOrdered className="h-4 w-4 text-gray-700" />
+        </button>
+        <button
+          type="button"
+          onClick={() => editor.chain().focus().setParagraph().run()}
+          className={`p-2 rounded ${editor.isActive('paragraph') ? 'bg-blue-200' : 'hover:bg-gray-200'}`}
+          title="Paragraph"
+        >
+          <Pilcrow className="h-4 w-4 text-gray-700" />
+        </button>
+        <button
+          type="button"
+          onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}
+          className={`p-2 rounded ${editor.isActive('heading', { level: 1 }) ? 'bg-blue-200' : 'hover:bg-gray-200'}`}
+          title="Heading 1"
+        >
+          <Heading1 className="h-4 w-4 text-gray-700" />
+        </button>
+        <button
+          type="button"
+          onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
+          className={`p-2 rounded ${editor.isActive('heading', { level: 2 }) ? 'bg-blue-200' : 'hover:bg-gray-200'}`}
+          title="Heading 2"
+        >
+          <Heading2 className="h-4 w-4 text-gray-700" />
+        </button>
+        <button
+          type="button"
+          onClick={setLink}
+          className={`p-2 rounded ${editor.isActive('link') ? 'bg-blue-200' : 'hover:bg-gray-200'}`}
+          title="Set Link"
+        >
+          <Link className="h-4 w-4 text-gray-700" />
+        </button>
+        <button
+          type="button"
+          onClick={addImage}
+          className="p-2 rounded hover:bg-gray-200"
+          title="Add Image by URL"
+        >
+          <Image className="h-4 w-4 text-gray-700" />
+        </button>
+      </div>
+      <EditorContent editor={editor} className="tiptap-editor-content" />
+    </div>
+  );
+};
+
 
 export default function EditPost() {
   const router = useRouter();
-  const { id } = router.query;
-  const [user, setUser] = useState<UserData | null>(null);
-  const [loadingPost, setLoadingPost] = useState(true); // Changed variable name for clarity
-  const [saving, setSaving] = useState(false);
-  const [deleting, setDeleting] = useState(false); // State for delete operation
+  const { id } = router.query; // Get post ID from URL
+  const [user, setUser] = useState<any>(null);
+  const [loading, setLoading] = useState(true); // Initial loading state
+  const [uploadingImage, setUploadingImage] = useState(false);
   const [previewMode, setPreviewMode] = useState(false);
   const [formData, setFormData] = useState<PostFormData>({
     title: '',
     excerpt: '',
     content: '',
+    imageUrl: '',
     category: 'Business',
     type: 'latest',
     tags: [],
-    isDraft: true,
+    isDraft: false,
+    readTime: '',
+    author: '',
+    authorId: '',
+    fullContent: '',
     seoTitle: '',
     seoDescription: '',
-    slug: '' // Initialize slug
+    slug: '',
   });
   const [tagInput, setTagInput] = useState('');
-  const [notification, setNotification] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
+  const [alertMessage, setAlertMessage] = useState<string | null>(null);
+  const [selectedImageFile, setSelectedImageFile] = useState<File | null>(null);
+  const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
-  const debounceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const wordCount = formData.content.split(/\s+/).filter(Boolean).length;
-
-  const modules = useMemo(() => ({
-    toolbar: [
-      [{ 'header': '1' }, { 'header': '2' }, { 'font': [] }],
-      [{ size: ['small', false, 'large', 'huge'] }],
-      ['bold', 'italic', 'underline', 'strike', 'blockquote', 'code-block'],
-      [{ 'list': 'ordered' }, { 'list': 'bullet' }, { 'indent': '-1' }, { 'indent': '+1' }],
-      ['link', 'image', 'video'],
-      [{ 'color': [] }, { 'background': [] }],
-      [{ 'align': [] }],
-      ['clean']
-    ],
-  }), []);
-
-  const formats = [
-    'header', 'font', 'size',
-    'bold', 'italic', 'underline', 'strike', 'blockquote', 'code-block',
-    'list', 'bullet', 'indent',
-    'link', 'image', 'video',
-    'color', 'background', 'align',
-    'clean'
-  ];
-
-  // User authentication check
+  // Effect to load user data from localStorage
   useEffect(() => {
     const token = localStorage.getItem('authToken');
     const userData = localStorage.getItem('user');
-
+    
     if (!token || !userData) {
       router.push('/admin/login');
       return;
     }
 
     try {
-      const parsedUser: UserData = JSON.parse(userData);
+      const parsedUser = JSON.parse(userData);
       setUser(parsedUser);
+      // Set author and authorId from logged-in user if available
+      setFormData(prev => ({
+        ...prev,
+        author: parsedUser.name || (parsedUser.role === 'superadmin' ? 'Super Admin' : 'Content Admin'),
+        authorId: parsedUser._id,
+      }));
     } catch (error) {
-      console.error("Failed to parse user data from localStorage:", error);
+      console.error('Failed to parse user data from localStorage:', error);
       router.push('/admin/login');
     }
   }, [router]);
 
-  // Load post data for editing
+  // Effect to load post data for editing
   useEffect(() => {
-    if (id && user) { // Ensure ID and user are available before loading
-      loadPost();
+    if (!id || !user) { // Ensure user is loaded before fetching post
+      setLoading(true); // Keep loading true if id or user is not ready
+      return;
     }
-  }, [id, user]);
 
-  // Generate slug dynamically from title
-  useEffect(() => {
-    const newSlug = formData.title
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/(^-|-$)/g, '');
-    if (newSlug !== formData.slug) {
-      setFormData(prev => ({ ...prev, slug: newSlug }));
+    const fetchPost = async () => {
+      setLoading(true);
+      try {
+        const postData = await postsAPI.getById(id as string);
+        setFormData({
+          title: postData.title || '',
+          excerpt: postData.excerpt || '',
+          content: postData.content || '',
+          imageUrl: postData.imageUrl || '',
+          category: postData.category || 'Business',
+          type: postData.type || 'latest',
+          tags: postData.tags || [],
+          isDraft: postData.isDraft || false,
+          readTime: postData.readTime || '',
+          author: postData.author || (user?.role === 'superadmin' ? 'Super Admin' : 'Content Admin'),
+          authorId: postData.authorId || user?._id,
+          fullContent: postData.fullContent || postData.content || '',
+          seoTitle: postData.seoTitle || '',
+          seoDescription: postData.seoDescription || '',
+          slug: postData.slug || '',
+        });
+        setImagePreviewUrl(postData.imageUrl); // Set initial preview from fetched image
+      } catch (error: any) {
+        console.error('Error fetching post:', error);
+        setAlertMessage(error.message || 'Failed to fetch post for editing.');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchPost();
+  }, [id, user]); // Depend on 'id' and 'user'
+
+  const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+    const { name, value, type } = e.target;
+    const newValue = (e.target as HTMLInputElement).type === 'checkbox' || (e.target as HTMLInputElement).type === 'radio'
+      ? (e.target as HTMLInputElement).checked
+      : value;
+
+    setFormData((prev) => ({
+      ...prev,
+      [name]: newValue,
+    }));
+  }, []);
+
+  const handleEditorContentChange = useCallback((html: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      content: html,
+      fullContent: html,
+    }));
+  }, []);
+
+  const handleFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      setSelectedImageFile(file);
+      setImagePreviewUrl(URL.createObjectURL(file));
+      setFormData(prev => ({ ...prev, imageUrl: '' })); // Clear direct URL if file selected
+    } else {
+      setSelectedImageFile(null);
+      setImagePreviewUrl(formData.imageUrl || null); // Revert to fetched URL if no new file
     }
-  }, [formData.title]); // Only re-run when title changes
+  }, [formData.imageUrl]); // Add formData.imageUrl to dependency array
 
-
-  const loadPost = async () => {
-    try {
-      setLoadingPost(true);
-      const post = await postsAPI.getById(id as string);
-      
-      setFormData({
-        title: post.title || '',
-        excerpt: post.excerpt || '',
-        content: post.content || '',
-        category: post.category || 'Business',
-        type: post.type || 'latest',
-        tags: post.tags || [],
-        isDraft: post.isDraft || false,
-        seoTitle: post.seoTitle || '',
-        seoDescription: post.seoDescription || '',
-        slug: post.slug || '' // Ensure slug is loaded from existing post
-      });
-    } catch (error: any) {
-      console.error('Error loading post:', error);
-      showNotification('Failed to load post. Please try again.', 'error');
-      router.push('/admin/dashboard'); // Redirect if post cannot be loaded
-    } finally {
-      setLoadingPost(false);
-    }
-  };
-
-  const handleInputChange = (field: keyof PostFormData, value: any) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
-    if (debounceTimeoutRef.current) {
-      clearTimeout(debounceTimeoutRef.current);
-    }
-    debounceTimeoutRef.current = setTimeout(() => {
-      // console.log("Content changed, potentially trigger autosave here.");
-    }, 1500);
-  };
-
-  const handleAddTag = () => {
-    if (tagInput.trim() && !formData.tags.includes(tagInput.trim().toLowerCase())) {
+  const handleAddTag = useCallback(() => {
+    if (tagInput.trim() && !formData.tags.includes(tagInput.trim())) {
       setFormData(prev => ({
         ...prev,
-        tags: [...prev.tags, tagInput.trim().toLowerCase()]
+        tags: [...prev.tags, tagInput.trim()]
       }));
       setTagInput('');
     }
-  };
+  }, [tagInput, formData.tags]);
 
-  const handleRemoveTag = (tagToRemove: string) => {
+  const handleRemoveTag = useCallback((tagToRemove: string) => {
     setFormData(prev => ({
       ...prev,
       tags: prev.tags.filter(tag => tag !== tagToRemove)
     }));
-  };
+  }, []);
 
-  const showNotification = (message: string, type: 'success' | 'error' | 'info') => {
-    setNotification({ message, type });
-    setTimeout(() => setNotification(null), 5000);
+  const uploadImage = async (file: File): Promise<string> => {
+    setUploadingImage(true);
+    try {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+
+      return new Promise((resolve, reject) => {
+        reader.onloadend = async () => {
+          try {
+            const base64data = reader.result as string;
+            const response = await fetch('/api/upload-image', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('authToken')}` },
+              body: JSON.stringify({ image: base64data, fileName: file.name }),
+            });
+
+            if (!response.ok) {
+              const errorData = await response.json();
+              throw new Error(errorData.error || 'Image upload failed');
+            }
+
+            const data = await response.json();
+            resolve(data.imageUrl);
+          } catch (uploadError) {
+            console.error('Error during image upload:', uploadError);
+            reject(uploadError);
+          } finally {
+             setUploadingImage(false);
+          }
+        };
+        reader.onerror = error => {
+          console.error('Error reading file:', error);
+          reject(new Error('Failed to read image file.'));
+        };
+      });
+    } catch (error) {
+      setUploadingImage(false);
+      throw error;
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setSaving(true);
-    setNotification(null);
+    setLoading(true);
+    setAlertMessage(null);
 
-    if (!formData.title || !formData.content) {
-      showNotification('Title and content are required!', 'error');
-      setSaving(false);
-      return;
+    if (!formData.title || !formData.content || !formData.category || !formData.type || !formData.readTime) {
+        setAlertMessage('Please fill in all required fields: Title, Content, Category, Type, and Read Time.');
+        setLoading(false);
+        return;
     }
-    if (!user?._id) {
-        showNotification('User not authenticated. Please log in again.', 'error');
-        router.push('/admin/login');
-        setSaving(false);
+    if (!selectedImageFile && !formData.imageUrl) {
+        setAlertMessage('Please either select an image file or provide an Image URL.');
+        setLoading(false);
         return;
     }
 
+    let finalImageUrl = formData.imageUrl;
     try {
+      if (selectedImageFile) {
+        finalImageUrl = await uploadImage(selectedImageFile);
+      } else if (!finalImageUrl) {
+        throw new Error('No image provided.');
+      }
+
       const postData = {
         ...formData,
-        author: user.name,
-        authorId: user._id, // Ensure _id is sent as a string
-        // Slug is now managed by a useEffect, so no need to generate here
+        imageUrl: finalImageUrl,
+        author: formData.author || (user?.role === 'superadmin' ? 'Super Admin' : 'Content Admin'),
+        authorId: formData.authorId || user?._id,
+        slug: formData.title.toLowerCase()
+          .replace(/[^a-z0-9]+/g, '-')
+          .replace(/(^-|-$)/g, ''),
+        readTime: Number(formData.readTime),
       };
 
-      await postsAPI.update(id as string, postData);
-      showNotification('Post updated successfully!', 'success');
+      await postsAPI.update(id as string, postData); // Use postsAPI.update for editing
       router.push('/admin/dashboard');
     } catch (error: any) {
       console.error('Error updating post:', error);
-      showNotification(error.response?.data?.error || 'Failed to update post. Please check your data and try again.', 'error');
+      setAlertMessage(error.message || 'Failed to update post');
     } finally {
-      setSaving(false);
+      setLoading(false);
+      setUploadingImage(false);
     }
   };
 
   const handleDelete = async () => {
-    // Replaced confirm() with a custom modal for better UX and consistency
-    showNotification('Are you sure you want to delete this post? This action cannot be undone.', 'info');
-    // Implement a custom confirmation modal here. For now, we'll use a direct delete after a delay or a specific user action in the modal.
-    // For this example, I'll simulate the confirmation by directly calling delete after an info notification
-    // In a real app, you would show a modal and then call this logic on a 'Confirm Delete' button click.
-
-    if (!confirm('Are you sure you want to delete this post? This action cannot be undone.')) { // Temporary browser confirm for demonstration
-      return;
-    }
-
-    setDeleting(true);
-    setNotification(null);
-
+    setShowDeleteConfirm(false); // Close confirmation modal
+    setLoading(true);
+    setAlertMessage(null);
     try {
       await postsAPI.delete(id as string);
-      showNotification('Post deleted successfully!', 'success');
-      router.push('/admin/dashboard');
+      router.push('/admin/dashboard'); // Redirect after deletion
     } catch (error: any) {
       console.error('Error deleting post:', error);
-      showNotification(error.response?.data?.error || 'Failed to delete post.', 'error');
+      setAlertMessage(error.message || 'Failed to delete post.');
     } finally {
-      setDeleting(false);
+      setLoading(false);
     }
   };
 
-  if (!user) { // Initial user loading
+
+  if (loading && !formData.title) { // Show full loading only if post data hasn't loaded yet
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <Head><title>Loading Admin Dashboard...</title></Head>
-        <div className="text-center text-gray-600">
+        <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4">Loading user data...</p>
+          <p className="mt-4 text-gray-600">Loading Post Data...</p>
         </div>
       </div>
     );
   }
 
-  if (loadingPost) { // Loading specific post data
+  if (!user) { // Still wait for user authentication
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <Head><title>Loading Post...</title></Head>
-        <div className="text-center text-gray-600">
+        <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4">Loading post data...</p>
+          <p className="mt-4 text-gray-600">Authenticating User...</p>
         </div>
       </div>
     );
   }
+
+
+  const currentImageSource = imagePreviewUrl || formData.imageUrl;
 
   return (
-    <div className="min-h-screen bg-gray-50 text-gray-600 font-inter">
-      <Head>
-        <title>Edit Post - Admin</title>
-        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet" />
-      </Head>
+    <div className="min-h-screen bg-gray-50">
+      {alertMessage && <CustomAlertModal message={alertMessage} onClose={() => setAlertMessage(null)} />}
+      {showDeleteConfirm && (
+        <ConfirmationModal
+          message="Are you sure you want to delete this post? This action cannot be undone."
+          onConfirm={handleDelete}
+          onCancel={() => setShowDeleteConfirm(false)}
+        />
+      )}
 
       {/* Header */}
-      <div className="bg-white shadow-sm border-b border-gray-100">
+      <div className="bg-white shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4">
@@ -308,114 +538,100 @@ export default function EditPost() {
               </button>
               <button
                 type="button"
-                onClick={handleDelete}
-                disabled={deleting}
+                onClick={() => setShowDeleteConfirm(true)}
+                disabled={loading}
                 className="flex items-center space-x-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 transition-colors shadow-md"
               >
                 <Trash2 className="h-4 w-4" />
-                <span>{deleting ? 'Deleting...' : 'Delete Post'}</span>
+                <span>Delete</span>
               </button>
               <button
                 type="submit"
                 form="post-form"
-                disabled={saving}
+                disabled={loading || uploadingImage}
                 className="flex items-center space-x-2 bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors shadow-md"
               >
                 <Save className="h-4 w-4" />
-                <span>{saving ? 'Saving...' : 'Save Changes'}</span>
+                <span>{loading ? 'Saving...' : uploadingImage ? 'Uploading Image...' : 'Update Post'}</span>
               </button>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Notification Display */}
-      {notification && (
-        <div className={`fixed top-4 right-4 z-50 flex items-center p-4 rounded-lg shadow-lg ${
-          notification.type === 'success' ? 'bg-green-100 text-green-800' :
-          notification.type === 'error' ? 'bg-red-100 text-red-800' :
-          'bg-blue-100 text-blue-800'
-        }`}>
-          <BellRing className="h-5 w-5 mr-2" />
-          <span>{notification.message}</span>
-          <button onClick={() => setNotification(null)} className="ml-4 text-sm font-medium">X</button>
-        </div>
-      )}
-
-      {/* Main Content Area */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         {previewMode ? (
           <div className="bg-white shadow-lg rounded-xl p-8 transition-all duration-300">
-            <h1 className="text-4xl font-extrabold text-gray-800 mb-4 font-serif leading-tight">
-              {formData.title || 'Untitled Article'}
-            </h1>
+            {currentImageSource && (
+              <img
+                src={currentImageSource}
+                alt={formData.title || 'Post Image'}
+                className="w-full h-64 object-cover rounded-lg mb-6"
+                onError={(e) => { e.currentTarget.src = "https://placehold.co/800x400/cccccc/333333?text=Image+Load+Error"; e.currentTarget.onerror = null; }}
+              />
+            )}
+            {!currentImageSource && (
+                <div className="w-full h-64 bg-gray-200 flex items-center justify-center rounded-lg mb-6 text-gray-500">
+                    <span className="text-lg font-medium">No Image Provided</span>
+                </div>
+            )}
+
+            <h1 className="text-3xl font-bold text-gray-900 mb-4">{formData.title || 'Untitled Post'}</h1>
             {formData.excerpt && (
-              <p className="text-xl text-gray-700 mb-6 italic border-l-4 border-blue-400 pl-4">
-                "{formData.excerpt}"
-              </p>
+              <p className="text-lg text-gray-600 mb-6 italic">"{formData.excerpt}"</p>
             )}
-            <div className="flex flex-wrap items-center space-x-4 mb-6 text-sm text-gray-500 border-b pb-4">
-              <span className="bg-gray-100 px-3 py-1 rounded-full text-gray-700">Category: {formData.category}</span>
-              <span className="bg-gray-100 px-3 py-1 rounded-full text-gray-700">Type: {POST_TYPES.find(t => t.value === formData.type)?.label}</span>
-              <span className="bg-gray-100 px-3 py-1 rounded-full text-gray-700">Status: {formData.isDraft ? 'Draft' : 'Published'}</span>
-              <span className="ml-auto text-gray-500">Word Count: {wordCount}</span>
+            <div className="flex items-center space-x-4 mb-6 text-sm text-gray-500">
+              <span>Category: {formData.category}</span>
+              <span>Type: {POST_TYPES.find(t => t.value === formData.type)?.label}</span>
+              <span>Status: {formData.isDraft ? 'Draft' : 'Published'}</span>
+              <span>Read Time: {formData.readTime || 'N/A'} min</span>
             </div>
-            {formData.tags.length > 0 && (
-              <div className="flex flex-wrap gap-2 mb-8 border-b pb-4">
-                <span className="font-semibold text-gray-700 mr-2">Tags:</span>
+              {formData.tags.length > 0 && (
+              <div className="flex flex-wrap gap-2 mb-6">
                 {formData.tags.map(tag => (
-                  <span key={tag} className="px-3 py-1 bg-blue-50 text-blue-700 text-sm rounded-full shadow-sm">
-                    {tag}
+                  <span key={tag} className="px-3 py-1 bg-blue-100 text-blue-800 text-sm rounded-full">
+                        {tag}
                   </span>
-                ))}
-              </div>
+                    ))}
+                  </div>
             )}
-            <div className="prose prose-lg max-w-none text-gray-800 leading-relaxed font-light article-content">
+            <div className="prose max-w-none">
               {formData.content ? (
                 <div dangerouslySetInnerHTML={{ __html: formData.content }} />
               ) : (
-                <p className="text-gray-400 italic text-center py-10">No content yet. Start writing in edit mode!</p>
+                <p className="text-gray-400 italic">No content yet...</p>
               )}
             </div>
-            {formData.seoTitle && (
-              <div className="mt-8 pt-6 border-t border-gray-200">
-                <h3 className="text-xl font-semibold text-gray-800 mb-2">SEO Preview:</h3>
-                <p className="text-blue-700 text-lg mb-1">{formData.seoTitle}</p>
-                <p className="text-green-600 text-sm">https://bie-website.vercel.app/{formData.slug || 'untitled-post'}</p>
-                <p className="text-gray-600 text-sm mt-1">{formData.seoDescription || formData.excerpt || 'No SEO description provided.'}</p>
-              </div>
-            )}
           </div>
         ) : (
           <form id="post-form" onSubmit={handleSubmit} className="space-y-6">
             <div className="bg-white shadow-lg rounded-xl p-8">
-              {/* General Post Details */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8 border-b pb-6">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                   <div>
-                    <label htmlFor="title" className="block text-sm font-semibold text-gray-700 mb-2">
-                    Title <span className="text-red-500">*</span>
+                    <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-2">
+                    Title *
                     </label>
                   <input
                     type="text"
-                    id="title"
                     required
+                    name="title"
                       value={formData.title}
-                      onChange={(e) => handleInputChange('title', e.target.value)}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-800 text-lg"
-                    placeholder="Enter a compelling title..."
+                      onChange={handleInputChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-800"
+                    placeholder="Enter post title..."
                     />
                   </div>
 
                   <div>
-                    <label htmlFor="category" className="block text-sm font-semibold text-gray-700 mb-2">
-                      Category <span className="text-red-500">*</span>
+                    <label htmlFor="category" className="block text-sm font-medium text-gray-700 mb-2">
+                      Category *
                     </label>
                     <select
-                    id="category"
                     required
+                    name="category"
                       value={formData.category}
-                      onChange={(e) => handleInputChange('category', e.target.value)}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-800"
+                      onChange={handleInputChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-800"
                     >
                       {CATEGORIES.map(category => (
                         <option key={category} value={category}>{category}</option>
@@ -424,15 +640,15 @@ export default function EditPost() {
                   </div>
 
                   <div>
-                    <label htmlFor="post-type" className="block text-sm font-semibold text-gray-700 mb-2">
-                    Post Type <span className="text-red-500">*</span>
+                    <label htmlFor="type" className="block text-sm font-medium text-gray-700 mb-2">
+                    Post Type *
                     </label>
                   <select
-                    id="post-type"
                     required
+                    name="type"
                     value={formData.type}
-                    onChange={(e) => handleInputChange('type', e.target.value)}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-800"
+                    onChange={handleInputChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-800"
                   >
                     {POST_TYPES.map(type => (
                       <option key={type.value} value={type.value}>{type.label}</option>
@@ -441,84 +657,143 @@ export default function EditPost() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Publish Status
+                  <label htmlFor="readTime" className="block text-sm font-medium text-gray-700 mb-2">
+                    Read Time (minutes) *
                   </label>
-                  <div className="flex items-center space-x-6 h-full mt-1">
-                    <label className="flex items-center cursor-pointer">
+                  <input
+                    type="number"
+                    required
+                    name="readTime"
+                    value={formData.readTime}
+                    onChange={handleInputChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-800"
+                    placeholder="Estimated read time..."
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="isDraft" className="block text-sm font-medium text-gray-700 mb-2">
+                    Status
+                  </label>
+                  <div className="flex items-center space-x-4">
+                    <label className="flex items-center">
                       <input
                         type="radio"
-                        name="publishStatus"
+                        name="isDraft"
                         checked={!formData.isDraft}
-                        onChange={() => handleInputChange('isDraft', false)}
-                        className="mr-2 h-4 w-4 text-blue-600 border-gray-300 focus:ring-blue-500"
+                        onChange={() => setFormData(prev => ({ ...prev, isDraft: false }))}
+                        className="mr-2"
                       />
-                      <span className="text-sm font-medium text-gray-700">Publish</span>
+                      <span className="text-sm text-gray-800">Publish</span>
                     </label>
-                    <label className="flex items-center cursor-pointer">
+                    <label className="flex items-center">
                       <input
                         type="radio"
-                        name="publishStatus"
+                        name="isDraft"
                         checked={formData.isDraft}
-                        onChange={() => handleInputChange('isDraft', true)}
-                        className="mr-2 h-4 w-4 text-blue-600 border-gray-300 focus:ring-blue-500"
+                        onChange={() => setFormData(prev => ({ ...prev, isDraft: true }))}
+                        className="mr-2"
                       />
-                      <span className="text-sm font-medium text-gray-700">Save as Draft</span>
+                      <span className="text-sm text-gray-800">Save as Draft</span>
                     </label>
                   </div>
                 </div>
+
+                <div>
+                  <label htmlFor="imageUpload" className="block text-sm font-medium text-gray-700 mb-2">Featured Image</label>
+                  <div className="flex items-center space-x-2 mb-2">
+                      <input
+                          type="file"
+                          id="imageUpload"
+                          accept="image/*"
+                          onChange={handleFileChange}
+                          className="hidden"
+                      />
+                      <label
+                          htmlFor="imageUpload"
+                          className="flex items-center space-x-2 px-4 py-2 border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors bg-white text-gray-700"
+                      >
+                          <UploadCloud className="h-4 w-4" />
+                          <span>{selectedImageFile ? selectedImageFile.name : 'Choose File'}</span>
+                      </label>
+                      <span className="text-sm text-gray-500">OR</span>
+                      <input
+                          type="url"
+                          name="imageUrl"
+                          value={formData.imageUrl}
+                          onChange={handleInputChange}
+                          placeholder="Paste Image URL"
+                          className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-800"
+                          disabled={!!selectedImageFile}
+                      />
+                  </div>
+                  {(imagePreviewUrl || formData.imageUrl) && (
+                    <div className="mt-2">
+                        <img
+                          src={currentImageSource}
+                          alt="Image Preview"
+                          className="max-w-full h-32 object-cover rounded-md"
+                          onError={(e) => { e.currentTarget.src = "https://placehold.co/300x128/cccccc/333333?text=Invalid+URL"; e.currentTarget.onerror = null; }}
+                        />
+                        {selectedImageFile && (
+                            <p className="text-xs text-gray-500 mt-1 text-gray-800">
+                                Selected: {selectedImageFile.name} ({(selectedImageFile.size / 1024).toFixed(2)} KB)
+                            </p>
+                        )}
+                    </div>
+                  )}
+                  {uploadingImage && <p className="text-blue-600 text-sm mt-2 text-gray-800">Uploading image...</p>}
+                </div>
+
               </div>
 
-              {/* Excerpt Section */}
-              <div className="mb-8 border-b pb-6">
-                <label htmlFor="excerpt" className="block text-sm font-semibold text-gray-700 mb-2">
+              <div className="mt-6">
+                <label htmlFor="excerpt" className="block text-sm font-medium text-gray-700 mb-2">
                   Excerpt
                 </label>
                 <textarea
-                  id="excerpt"
+                  name="excerpt"
                   value={formData.excerpt}
-                  onChange={(e) => handleInputChange('excerpt', e.target.value)}
-                  rows={4}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-800"
-                  placeholder="A brief, engaging summary for search engines and social media..."
+                  onChange={handleInputChange}
+                  rows={3}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-800"
+                  placeholder="Brief summary of the post..."
                 />
-                  </div>
+              </div>
 
-              {/* Tags Section */}
-              <div className="mb-8 border-b pb-6">
-                <label htmlFor="tag-input" className="block text-sm font-semibold text-gray-700 mb-2">
-                  Tags <span className="text-gray-500 text-xs">(Press Enter to add)</span>
+              <div className="mt-6">
+                <label htmlFor="tags" className="block text-sm font-medium text-gray-700 mb-2">
+                  Tags
                 </label>
-                <div className="flex items-center space-x-3 mb-3">
+                <div className="flex items-center space-x-2 mb-3">
                   <input
                     type="text"
-                    id="tag-input"
                     value={tagInput}
                     onChange={(e) => setTagInput(e.target.value)}
                     onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddTag())}
-                    className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-800"
-                    placeholder="Enter tag (e.g., 'economy', 'tech')..."
+                    className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-800"
+                    placeholder="Add a tag and press Enter..."
                   />
                   <button
                     type="button"
                     onClick={handleAddTag}
-                    className="px-5 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-800 transition-colors shadow-md"
+                    className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
                   >
-                    Add Tag
+                    Add
                   </button>
                   </div>
                   {formData.tags.length > 0 && (
-                    <div className="flex flex-wrap gap-2 mt-4">
+                    <div className="flex flex-wrap gap-2">
                     {formData.tags.map(tag => (
                       <span
                         key={tag}
-                        className="inline-flex items-center px-4 py-1.5 bg-blue-100 text-blue-800 text-sm font-medium rounded-full shadow-sm"
+                        className="inline-flex items-center px-3 py-1 bg-blue-100 text-blue-800 text-sm rounded-full"
                       >
                           {tag}
                           <button
                             type="button"
                           onClick={() => handleRemoveTag(tag)}
-                            className="ml-2 text-blue-600 hover:text-blue-800 transition-colors"
+                            className="ml-2 text-blue-600 hover:text-blue-800"
                           >
                           ×
                           </button>
@@ -528,116 +803,19 @@ export default function EditPost() {
                   )}
                 </div>
 
-              {/* Rich Content Editor */}
-              <div className="mb-8 border-b pb-6">
-                    <label htmlFor="content-editor" className="block text-sm font-semibold text-gray-700 mb-2">
-                  Content <span className="text-red-500">*</span>
+              <div className="mt-6">
+                    <label htmlFor="content" className="block text-sm font-medium text-gray-700 mb-2">
+                  Content *
                     </label>
-                    <ReactQuill
-                  id="content-editor"
-                  theme="snow"
-                  value={formData.content}
-                  onChange={(value) => handleInputChange('content', value)}
-                  modules={modules}
-                  formats={formats}
-                  placeholder="Write your detailed article content here. Use the toolbar for formatting, images, and videos..."
-                  className="bg-white rounded-lg border border-gray-300 quill-editor-height"
-                      />
-                <p className="mt-2 text-sm text-gray-500">Word Count: {wordCount}</p>
+                    <TiptapEditor
+                      initialContent={formData.content}
+                      onContentChange={handleEditorContentChange}
+                    />
                     </div>
-
-              {/* SEO Section */}
-              <div className="mb-4">
-                <h3 className="text-xl font-bold text-gray-800 mb-4 flex items-center">
-                  <Info className="h-5 w-5 mr-2 text-blue-500" />
-                  SEO Optimization
-                </h3>
-                <div className="space-y-4">
-                  <div>
-                    <label htmlFor="seo-title" className="block text-sm font-semibold text-gray-700 mb-2">
-                      SEO Title
-                    </label>
-                    <input
-                      type="text"
-                      id="seo-title"
-                      value={formData.seoTitle}
-                      onChange={(e) => handleInputChange('seoTitle', e.target.value)}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-800"
-                      placeholder="Optimized title for search engines (max 60 characters)"
-                      maxLength={60}
-                    />
-                    <p className="mt-1 text-xs text-gray-500">{formData.seoTitle?.length || 0}/60 characters</p>
                   </div>
-                  <div>
-                    <label htmlFor="seo-description" className="block text-sm font-semibold text-gray-700 mb-2">
-                      SEO Description
-                    </label>
-                    <textarea
-                      id="seo-description"
-                      value={formData.seoDescription}
-                      onChange={(e) => handleInputChange('seoDescription', e.target.value)}
-                      rows={3}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-800"
-                      placeholder="Meta description for search engine results (max 160 characters)"
-                      maxLength={160}
-                    />
-                    <p className="mt-1 text-xs text-gray-500">{formData.seoDescription?.length || 0}/160 characters</p>
-                  </div>
-                </div>
-              </div>
-
-            </div>
-          </form>
-        )}
-      </div>
-      {/* Custom CSS for Quill Editor height */}
-      <style jsx global>{`
-        .quill-editor-height .ql-container {
-          min-height: 400px; /* Adjust as needed */
-          max-height: 800px; /* Optional: limit max height */
-          overflow-y: auto;
-          border-bottom-left-radius: 0.5rem;
-          border-bottom-right-radius: 0.5rem;
-        }
-        .quill-editor-height .ql-toolbar.ql-snow {
-          border-top-left-radius: 0.5rem;
-          border-top-right-radius: 0.5rem;
-        }
-        .article-content h1, .article-content h2, .article-content h3 {
-          font-family: 'Inter', serif; /* Or any other serif font for headings */
-          font-weight: 700;
-          color: #1a202c; /* Darker gray for headings */
-        }
-        .article-content p {
-          font-family: 'Inter', sans-serif;
-          font-size: 1.125rem; /* Equivalent to text-lg */
-          line-height: 1.75; /* Equivalent to leading-relaxed */
-          color: #4a5568; /* Slightly darker than text-gray-600 for readability */
-        }
-        .article-content blockquote {
-          border-left: 4px solid #3b82f6; /* Tailwind blue-500 */
-          padding-left: 1rem;
-          margin-left: 0;
-          font-style: italic;
-          color: #4b5563; /* text-gray-700 */
-        }
-        .article-content img {
-          max-width: 100%;
-          height: auto;
-          border-radius: 0.5rem;
-          margin-top: 1rem;
-          margin-bottom: 1rem;
-        }
-        .article-content .ql-align-center {
-          text-align: center;
-        }
-        .article-content .ql-align-right {
-          text-align: right;
-        }
-        .article-content .ql-align-justify {
-          text-align: justify;
-        }
-      `}</style>
-    </div>
-  );
-}
+              </form>
+            )}
+          </div>
+        </div>
+      );
+    }
