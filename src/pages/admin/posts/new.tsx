@@ -105,12 +105,17 @@ export default function NewPost() {
     }
   }, [router]);
 
-  // Handler for all standard input fields (text, select, number, checkbox)
+  // Handler for all standard input fields (text, select, number, checkbox, radio)
   const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
-    const { name, value, type, checked } = e.target;
+    const { name, value, type } = e.target;
+    // ⭐ FIX: Safely access 'checked' only for checkbox/radio input types
+    const newValue = (e.target as HTMLInputElement).type === 'checkbox' || (e.target as HTMLInputElement).type === 'radio'
+      ? (e.target as HTMLInputElement).checked
+      : value;
+
     setFormData((prev) => ({
       ...prev,
-      [name]: type === 'checkbox' ? checked : value,
+      [name]: newValue,
     }));
   }, []);
 
