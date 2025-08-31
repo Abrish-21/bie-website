@@ -82,7 +82,9 @@ async function handleCreatePost(req: NextApiRequest, res: NextApiResponse, db: a
       title,
       excerpt,
       content,
+      imageUrl, // <-- ADDED THIS
       category,
+      readTime, // <-- ADDED THIS
       tags,
       type,
       isDraft,
@@ -90,10 +92,10 @@ async function handleCreatePost(req: NextApiRequest, res: NextApiResponse, db: a
       authorId,
     } = req.body;
 
-    // Only require essential fields
-    if (!title || !content || !category || !type) {
+    // Validate that all required fields are present
+    if (!title || !content || !imageUrl || !category || !type || !readTime) {
       return res.status(400).json({ 
-        error: 'Missing required fields. Please provide: title, content, category, and type' 
+        error: 'Missing required fields. Please provide: title, content, imageUrl, category, type, and readTime' 
       });
     }
 
@@ -101,7 +103,9 @@ async function handleCreatePost(req: NextApiRequest, res: NextApiResponse, db: a
       title,
       excerpt: excerpt || '',
       content,
+      imageUrl, // <-- ADDED THIS
       category,
+      readTime: String(readTime),
       tags: tags || [],
       type,
       isDraft: isDraft || false,

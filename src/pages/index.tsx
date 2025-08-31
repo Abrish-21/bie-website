@@ -6,13 +6,11 @@ import { MarketWatch } from '@/components/MarketWatch'
 import { OpinionSection } from '@/components/OpinionSection'
 import { Footer } from '@/components/Footer'
 import { AdSenseSlot } from '@/components/ads/AdSenseSlot'
-// ⭐ FIX: Removed import for LocalAd as it's being replaced with AdSenseSlots or LocalAdCarousel
 import SearchFilter from '@/components/SearchFilter'
 import { useState, useEffect } from 'react'
 import { getPosts, getTags, getCategories } from '@/lib/data'
 import { Clock, User, Eye } from 'lucide-react'
 import Link from 'next/link'
-import { LocalAd} from '@/components/ads/LocalAd' // ⭐ FIX: Import the new carousel
 
 export default function HomePage() {
   const [posts, setPosts] = useState<any[]>([])
@@ -134,197 +132,167 @@ export default function HomePage() {
   }
 
   return (
-    <div className="min-h-screen bg-white flex flex-col">
+    <div className="min-h-screen bg-white">
       <Header />
-      
-      {/* The main content area now uses a grid for main content and a sidebar */}
-      <main className="max-w-7xl mx-auto px-4 py-8 grid lg:grid-cols-3 gap-8 flex-grow">
-        {/* Main Content Column (2/3 width on large screens) */}
-        <div className="lg:col-span-2">
-          <MainContent />
-          <SearchFilter
-            onSearch={handleSearch}
-            onFilterByTag={handleFilterByTag}
-            onFilterByCategory={handleFilterByCategory}
-            availableTags={availableTags}
-            availableCategories={availableCategories}
-          />
-          {/* Apply/Clear controls for filters */}
-          <div className="mt-2 flex items-center gap-3 mb-8">
-            <button
-              onClick={() => setApplyFilters(true)}
-              className="px-4 py-2 bg-yellow-500 text-black rounded-lg hover:bg-yellow-600 transition-colors"
-            >
-              Apply filters
-            </button>
-            {(searchQuery || selectedTag || selectedCategory || applyFilters) && (
-              <button
-                onClick={clearAllFilters}
-                className="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors"
-              >
-                Clear all filters
-              </button>
-            )}
-          </div>
-
-          {/* Leaderboard Ad (Google AdSense) */}
-          <div className="bg-white border-b py-4 mb-8 rounded-lg shadow-sm text-center">
+      <MainContent />
+      <SearchFilter
+        onSearch={handleSearch}
+        onFilterByTag={handleFilterByTag}
+        onFilterByCategory={handleFilterByCategory}
+        availableTags={availableTags}
+        availableCategories={availableCategories}
+      />
+      {/* Apply/Clear controls for filters */}
+      <div className="max-w-7xl mx-auto px-4 mt-2 flex items-center gap-3">
+        <button
+          onClick={() => setApplyFilters(true)}
+          className="px-4 py-2 bg-yellow-500 text-black rounded-lg hover:bg-yellow-600 transition-colors"
+        >
+          Apply filters
+        </button>
+        {(searchQuery || selectedTag || selectedCategory || applyFilters) && (
+          <button
+            onClick={clearAllFilters}
+            className="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors"
+          >
+            Clear all filters
+          </button>
+        )}
+      </div>
+      <main>
+        {/* Leaderboard Ad (Google AdSense) */}
+        <div className="bg-white border-b">
+          <div className="max-w-7xl mx-auto px-4 py-4">
             <AdSenseSlot slotId="YOUR_ADSENSE_SLOT_ID_TOP" className="mx-auto" label="Leaderboard" />
           </div>
-
-          {/* Dynamic News Display */}
-          <section className="bg-gray-50 py-8 rounded-lg shadow-sm">
-            <div className="mb-8 p-4">
-              <div className="flex items-center justify-between mb-8">
-                <div>
-                  <h2 className="text-3xl font-bold text-black">
-                    {searchQuery || selectedTag || selectedCategory ? 'Filtered Results' : 'All News'}
-                  </h2>
-                  <p className="text-gray-600 mt-2">
-                    {filteredPosts.length === 0 ? 'No articles found' : `Showing ${filteredPosts.length} of ${posts.length} articles`}
-                    {(searchQuery || selectedTag || selectedCategory) && (
-                      <span className="ml-2">
-                        (filtered by {[searchQuery && 'search', selectedTag && 'tag', selectedCategory && 'category'].filter(Boolean).join(', ')})
-                      </span>
-                    )}
-                  </p>
-                </div>
-                {(searchQuery || selectedTag || selectedCategory) && (
-                  <button
-                    onClick={clearAllFilters}
-                    className="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors"
-                  >
-                    Clear all filters
-                  </button>
-                )}
+        </div>
+        {/* Dynamic News Display */}
+        <section className="bg-gray-50 py-12">
+          <div className="max-w-7xl mx-auto px-4">
+            <div className="flex items-center justify-between mb-8">
+              <div>
+                <h2 className="text-3xl font-bold text-black">
+                  {searchQuery || selectedTag || selectedCategory ? 'Filtered Results' : 'All News'}
+                </h2>
+                <p className="text-gray-600 mt-2">
+                  {filteredPosts.length === 0 ? 'No articles found' : `Showing ${filteredPosts.length} of ${posts.length} articles`}
+                  {(searchQuery || selectedTag || selectedCategory) && (
+                    <span className="ml-2">
+                      (filtered by {[searchQuery && 'search', selectedTag && 'tag', selectedCategory && 'category'].filter(Boolean).join(', ')})
+                    </span>
+                  )}
+                </p>
               </div>
-
-              {filteredPosts.length === 0 ? (
-                <div className="text-center py-12">
-                  <p className="text-gray-500 text-lg mb-4">No articles found{applyFilters ? ' matching your criteria' : ''}.</p>
-                  <button
-                    onClick={clearAllFilters}
-                    className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                  >
-                    Show all articles
-                  </button>
-                </div>
-              ) : (
-                <div className="grid md:grid-cols-2 gap-6">
-                  {filteredPosts.map((post, index) => (
-                    <Link key={index} href={`/posts/${post.slug}`} passHref>
-                      <article className="bg-white rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow group cursor-pointer h-full flex flex-col">
-                        <div className="relative">
-                          <img
-                            src={post.imageUrl || 'https://placehold.co/600x400/cccccc/333333?text=No+Image'}
-                            alt={post.title}
-                            className="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-300"
-                            onError={(e) => { e.currentTarget.src = 'https://placehold.co/600x400/cccccc/333333?text=No+Image'; e.currentTarget.onerror = null; }}
-                          />
-                          <div className="absolute top-3 left-3">
-                            <span className="bg-black text-white px-2 py-1 text-xs font-medium rounded">
-                              {post.category}
-                            </span>
-                          </div>
-                          <div className="absolute top-3 right-3">
-                            <span className={`px-2 py-1 text-xs font-medium rounded text-white ${
-                              post.type === 'featured' ? 'bg-orange-600' :
-                              post.type === 'market-watch' ? 'bg-green-600' :
-                              'bg-purple-600'
-                            }`}>
-                              {post.type === 'featured' ? 'Featured' :
-                               post.type === 'market-watch' ? 'Market' :
-                               post.type === 'opinion' ? 'Opinion' :
-                               'News'}
-                            </span>
-                          </div>
-                        </div>
-                        
-                        <div className="p-5 flex-grow">
-                          <h3 className="text-lg font-bold text-gray-900 group-hover:text-red-600 transition-colors mb-2 leading-tight">
-                            {post.title}
-                          </h3>
-                          <p className="text-gray-600 text-sm leading-relaxed mb-4">
-                            {post.excerpt}
-                          </p>
-
-                          <div className="flex items-center text-xs text-gray-500 space-x-4 mt-auto">
-                            <span className="flex items-center">
-                              <User className="w-3 h-3 mr-1" />
-                              {post.author}
-                            </span>
-                            <span className="flex items-center">
-                              <Clock className="w-3 h-3 mr-1" />
-                              {post.readTime}
-                            </span>
-                            <span className="flex items-center">
-                              <Eye className="w-3 h-3 mr-1" />
-                              {post.views?.toLocaleString() || '0'}
-                            </span>
-                          </div>
-
-                          {post.tags && post.tags.length > 0 && (
-                            <div className="flex flex-wrap gap-1 mt-3 pt-3 border-t border-gray-100">
-                              {post.tags.slice(0, 3).map((tag: string, tagIndex: number) => (
-                                <span key={tagIndex} className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded">
-                                  {tag}
-                                </span>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      </article>
-                    </Link>
-                  ))}
-                </div>
+              {(searchQuery || selectedTag || selectedCategory) && (
+                <button
+                  onClick={clearAllFilters}
+                  className="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors"
+                >
+                  Clear all filters
+                </button>
               )}
             </div>
-          </section>
 
-          {/* New Google Ads Section below All News */}
-          <div className="my-8 py-4 bg-white rounded-lg shadow-sm text-center">
-            <AdSenseSlot slotId="YOUR_ADSENSE_SLOT_ID_ALL_NEWS_BOTTOM" className="mx-auto" label="Below All News" />
-          </div>
-
-          {/* Original sections for when no filters are active */}
-          {!searchQuery && !selectedTag && !selectedCategory && (
-            <>
-              <FeaturedArticles posts={posts} />
-              <div className="my-8 py-4 bg-white rounded-lg shadow-sm text-center">
-                <AdSenseSlot slotId="YOUR_ADSENSE_SLOT_ID_MID" className="mx-auto" label="Mid-page" />
+            {filteredPosts.length === 0 ? (
+              <div className="text-center py-12">
+                <p className="text-gray-500 text-lg mb-4">No articles found{applyFilters ? ' matching your criteria' : ''}.</p>
+                <button
+                  onClick={clearAllFilters}
+                  className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                  Show all articles
+                </button>
               </div>
-              <MarketWatch />
-              {/* New Google Ads Section below MarketWatch */}
-              <div className="my-8 py-4 bg-white rounded-lg shadow-sm text-center">
-                <AdSenseSlot slotId="YOUR_ADSENSE_SLOT_ID_MARKET_WATCH_BOTTOM" className="mx-auto" label="Below Market Watch" />
+            ) : (
+              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {filteredPosts.map((post, index) => (
+                  <Link key={index} href={`/posts/${post.slug}`} passHref>
+                    <article className="bg-white rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow group cursor-pointer">
+                      <div className="relative">
+                        <img
+                          src={post.imageUrl}
+                          alt={post.title}
+                          className="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-300"
+                        />
+                        <div className="absolute top-3 left-3">
+                          <span className="bg-black text-white px-2 py-1 text-xs font-medium rounded">
+                            {post.category}
+                          </span>
+                        </div>
+                        <div className="absolute top-3 right-3">
+                          <span className={`px-2 py-1 text-xs font-medium rounded text-white ${
+                            post.type === 'featuredArticle' ? 'bg-orange-600' :
+                            post.type === 'marketUpdate' ? 'bg-green-600' :
+                            'bg-purple-600'
+                          }`}>
+                            {post.type === 'featuredArticle' ? 'Featured' :
+                             post.type === 'marketUpdate' ? 'Market' : 'Opinion'}
+                          </span>
+                        </div>
+                      </div>
+                      
+                      <div className="p-5">
+                        <h3 className="text-lg font-bold text-gray-900 group-hover:text-red-600 transition-colors mb-2 leading-tight">
+                          {post.title}
+                        </h3>
+                        <p className="text-gray-600 text-sm leading-relaxed mb-4">
+                          {post.excerpt}
+                        </p>
+
+                        <div className="flex items-center text-xs text-gray-500 space-x-4">
+                          <span className="flex items-center">
+                            <User className="w-3 h-3 mr-1" />
+                            {post.author}
+                          </span>
+                          <span className="flex items-center">
+                            <Clock className="w-3 h-3 mr-1" />
+                            {post.readTime}
+                          </span>
+                          <span className="flex items-center">
+                            <Eye className="w-3 h-3 mr-1" />
+                            {post.views?.toLocaleString() || '0'}
+                          </span>
+                        </div>
+
+                        {post.tags && post.tags.length > 0 && (
+                          <div className="flex flex-wrap gap-1 mt-3 pt-3 border-t border-gray-100">
+                            {post.tags.slice(0, 3).map((tag: string, tagIndex: number) => (
+                              <span key={tagIndex} className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded">
+                                {tag}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </article>
+                  </Link>
+                ))}
               </div>
-              <OpinionSection />
-              {/* New Google Ads Section below Opinion Section */}
-              <div className="my-8 py-4 bg-white rounded-lg shadow-sm text-center">
-                <AdSenseSlot slotId="YOUR_ADSENSE_SLOT_ID_OPINION_BOTTOM" className="mx-auto" label="Below Opinion Section" />
-              </div>
-            </>
-          )}
-        </div>
-
-        {/* Right Sidebar Column (1/3 width on large screens) */}
-        <aside className="lg:col-span-1 space-y-8">
-          {/* Local Ad Carousel Section */}
-          <div className="bg-white p-6 rounded-lg shadow-sm">
-            <h3 className="text-xl font-bold text-gray-900 mb-4">Local Ads</h3>
-            {/* ⭐ FIX: Using LocalAdCarousel instead of individual LocalAd ⭐ */}
-            <LocalAd />
+            )}
+            {/* Inline Local Ad between sections - REPLACED */}
+            <div className="mt-10">
+              <AdSenseSlot slotId="YOUR_ADSENSE_SLOT_ID_INLINE_1" label="Inline" />
+            </div>
           </div>
+        </section>
 
-          {/* Another AdSense Slot for the sidebar, if desired */}
-          <div className="bg-white p-6 rounded-lg shadow-sm text-center">
-            <AdSenseSlot slotId="YOUR_ADSENSE_SLOT_ID_SIDEBAR" className="mx-auto" label="Sidebar Ad" />
-          </div>
-
-          {/* You can add more sidebar content here, e.g., Trending Topics, Newsletter Signup */}
-        </aside>
+        {/* Original sections for when no filters are active */}
+        {!searchQuery && !selectedTag && !selectedCategory && (
+          <>
+            {/* <MainContent /> */}
+            <FeaturedArticles posts={posts} />
+            <div className="max-w-7xl mx-auto px-4 my-8">
+              <AdSenseSlot slotId="YOUR_ADSENSE_SLOT_ID_MID" label="Mid-page" />
+            </div>
+            <MarketWatch />
+            {/* Local Ad after MarketWatch - REPLACED */}
+            <div className="max-w-7xl mx-auto px-4 my-8">
+              <AdSenseSlot slotId="YOUR_ADSENSE_SLOT_ID_INLINE_2" label="Inline 2" />
+            </div>
+            <OpinionSection />
+          </>
+        )}
       </main>
-
       {/* Footer ad strip */}
       <div className="bg-white border-t">
         <div className="max-w-7xl mx-auto px-4 py-4">

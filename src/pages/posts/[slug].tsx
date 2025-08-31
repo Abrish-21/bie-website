@@ -1,10 +1,8 @@
-// src/pages/posts/[slug].tsx
-
 import { useRouter } from "next/router";
 import Link from "next/link";
 import React, { useEffect, useState } from "react";
 import { ArrowLeft, Clock, Eye, User, Calendar, Tag, BarChart2, MessageSquare } from "lucide-react";
-import { Card, CardContent } from '../../components/ui/card';
+import { Card } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { Badge } from '../../components/ui/badge';
 // ⭐ FIX: Removed import for ImageWithFallback as we're implementing its logic directly

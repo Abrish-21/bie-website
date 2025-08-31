@@ -13,7 +13,13 @@ import TiptapImageExtension from '@tiptap/extension-image';
 // --- End TipTap Imports ---
 
 // Custom Modal for alerts (replace alert() calls)
-const CustomAlertModal: React.FC<{ message: string; onClose: () => void }> = ({ message, onClose }) => {
+// ⭐ FIX: Added an explicit interface to define the types for the component's props to resolve the TypeScript error. ⭐
+interface CustomAlertModalProps {
+  message: string;
+  onClose: () => void;
+}
+
+const CustomAlertModal: React.FC<CustomAlertModalProps> = ({ message, onClose }) => {
   return (
     <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50">
       <div className="bg-white p-6 rounded-lg shadow-xl max-w-sm w-full">
@@ -174,7 +180,7 @@ const TiptapEditor: React.FC<{ initialContent: string; onContentChange: (html: s
         <button
           type="button"
           onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
-          className={`p-2 rounded ${editor.isActive('heading', { level: 2 }) ? 'bg-blue-200' : 'hover:bg-gray-200'}`}
+          className={`p-2 rounded ${editor.isActive('heading', { level: 1 }) ? 'bg-blue-200' : 'hover:bg-gray-200'}`}
           title="Heading 2"
         >
           <Heading2 className="h-4 w-4 text-gray-700" />
@@ -277,7 +283,7 @@ export default function NewPost() {
       const file = e.target.files[0];
       setSelectedImageFile(file);
       setImagePreviewUrl(URL.createObjectURL(file));
-      setFormData(prev => ({ ...prev, imageUrl: '' }));
+      setFormData(prev => ({ ...prev, imageUrl: '' })); // Clear direct URL if file selected
     } else {
       setSelectedImageFile(null);
       setImagePreviewUrl(null);
@@ -304,10 +310,10 @@ export default function NewPost() {
   const uploadImage = async (file: File): Promise<string> => {
     setUploadingImage(true);
     try {
-      // ⭐ DEBUG: Log the file object to the browser console before sending ⭐
-      console.log('[FRONTEND_DEBUG] File being sent:', file);
+      console.log('[FRONTEND_DEBUG] File being sent to API:', file);
 
       if (!file) {
+        console.error('[FRONTEND_ERROR] uploadImage received a null or undefined file.');
         throw new Error('No valid file provided for upload.');
       }
 
@@ -317,7 +323,6 @@ export default function NewPost() {
       const response = await fetch('/api/upload-image', {
         method: 'POST',
         headers: {
-          // DO NOT explicitly set 'Content-Type' for FormData, fetch handles it automatically
           Authorization: `Bearer ${localStorage.getItem('authToken')}`
         },
         body: formData,
@@ -348,7 +353,8 @@ export default function NewPost() {
         setLoading(false);
         return;
     }
-    // ⭐ FIX: Add explicit validation for selectedImageFile here ⭐
+    
+    // Validate if an image file is selected OR an image URL is provided
     if (!selectedImageFile && !formData.imageUrl) {
         setAlertMessage('Please either select an image file or provide an Image URL.');
         setLoading(false);
@@ -358,9 +364,15 @@ export default function NewPost() {
     let finalImageUrl = formData.imageUrl;
     try {
       if (selectedImageFile) {
+        // ⭐ NEW DEBUG LOG: Check selectedImageFile right before calling uploadImage ⭐
+        console.log('[FRONTEND_DEBUG] selectedImageFile before uploadImage call:', selectedImageFile);
+        if (!selectedImageFile) { // Extra check for robustness
+          console.error('[FRONTEND_ERROR] selectedImageFile is null or undefined immediately before upload. This should not happen if validation passed.');
+          throw new Error('Selected image file is unexpectedly null before upload.');
+        }
         finalImageUrl = await uploadImage(selectedImageFile);
-      } else if (!finalImageUrl) { // Double check if it's still empty here
-        throw new Error('No image provided, even after checking for selected file.');
+      } else if (!finalImageUrl) { 
+        throw new Error('No image provided, even after checking for selected file or URL.');
       }
 
       const postData = {
