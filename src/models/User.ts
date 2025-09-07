@@ -2,16 +2,25 @@ import mongoose, { Document, Schema } from 'mongoose';
 import bcrypt from 'bcryptjs';
 
 export interface IUser extends Document {
+  username: string;
   name: string;
   email: string;
   password: string;
   role: 'admin' | 'superadmin';
+  status: 'active' | 'pending';
   createdAt: Date;
   updatedAt: Date;
   comparePassword(candidatePassword: string): Promise<boolean>;
 }
 
 const userSchema = new Schema<IUser>({
+  username: {
+    type: String,
+    required: [true, 'Username is required'],
+    trim: true,
+    maxlength: [50, 'Username cannot be more than 50 characters'],
+    unique: true
+  },
   name: {
     type: String,
     required: [true, 'Name is required'],
@@ -35,6 +44,12 @@ const userSchema = new Schema<IUser>({
     type: String,
     enum: ['admin', 'superadmin'],
     default: 'admin'
+  },
+  status: {
+    type: String,
+    enum: ['active', 'pending'],
+    default: 'pending',
+    required: true
   }
 }, {
   timestamps: true

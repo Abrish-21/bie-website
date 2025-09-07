@@ -3,7 +3,10 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/router';
 import { ArrowLeft, Save, Eye, UploadCloud, Bold, Italic, List, ListOrdered, Link, Image, Pilcrow, Heading1, Heading2 } from 'lucide-react';
+import dynamic from 'next/dynamic';
 import { postsAPI } from '../../../lib/api';
+import { CustomAlertModal as ImportedCustomAlertModal, ConfirmationModal } from '../../../components/ui/Alerts';
+// import { POST_TYPES, CATEGORIES } from '../../../data/constants';
 
 // --- TipTap Imports ---
 import { useEditor, EditorContent } from '@tiptap/react';
@@ -68,146 +71,7 @@ const POST_TYPES = [
 ];
 
 // TipTap Editor component with toolbar
-const TiptapEditor: React.FC<{ initialContent: string; onContentChange: (html: string) => void }> = ({
-  initialContent,
-  onContentChange,
-}) => {
-  const editor = useEditor({
-    extensions: [
-      StarterKit,
-      TiptapLinkExtension.configure({
-        openOnClick: false,
-        autolink: true,
-      }),
-      TiptapImageExtension.configure({
-        inline: true,
-        allowBase64: true,
-      }),
-    ],
-    content: initialContent,
-    onUpdate: ({ editor }) => {
-      onContentChange(editor.getHTML());
-    },
-    editorProps: {
-      attributes: {
-        class: 'prose max-w-none focus:outline-none min-h-[300px] p-4 text-gray-800',
-      },
-    },
-  });
-
-  const setLink = useCallback(() => {
-    if (!editor) return;
-    const previousUrl = editor.getAttributes('link').href;
-    const url = window.prompt('URL', previousUrl);
-
-    if (url === null) {
-      return;
-    }
-
-    if (url === '') {
-      editor.chain().focus().unsetLink().run();
-      return;
-    }
-
-    editor.chain().focus().setLink({ href: url }).run();
-  }, [editor]);
-
-  const addImage = useCallback(() => {
-    if (!editor) return;
-    const url = window.prompt('URL');
-    if (url) {
-      editor.chain().focus().setImage({ src: url }).run();
-    }
-  }, [editor]);
-
-  if (!editor) {
-    return null;
-  }
-
-  return (
-    <div className="border border-gray-300 rounded-lg overflow-hidden">
-      <div className="flex flex-wrap items-center p-2 bg-gray-50 border-b border-gray-200 gap-1">
-        <button
-          type="button"
-          onClick={() => editor.chain().focus().toggleBold().run()}
-          disabled={!editor.can().chain().focus().toggleBold().run()}
-          className={`p-2 rounded ${editor.isActive('bold') ? 'bg-blue-200' : 'hover:bg-gray-200'}`}
-          title="Bold"
-        >
-          <Bold className="h-4 w-4 text-gray-700" />
-        </button>
-        <button
-          type="button"
-          onClick={() => editor.chain().focus().toggleItalic().run()}
-          disabled={!editor.can().chain().focus().toggleItalic().run()}
-          className={`p-2 rounded ${editor.isActive('italic') ? 'bg-blue-200' : 'hover:bg-gray-200'}`}
-          title="Italic"
-        >
-          <Italic className="h-4 w-4 text-gray-700" />
-        </button>
-        <button
-          type="button"
-          onClick={() => editor.chain().focus().toggleBulletList().run()}
-          className={`p-2 rounded ${editor.isActive('bulletList') ? 'bg-blue-200' : 'hover:bg-gray-200'}`}
-          title="Bullet List"
-        >
-          <List className="h-4 w-4 text-gray-700" />
-        </button>
-        <button
-          type="button"
-          onClick={() => editor.chain().focus().toggleOrderedList().run()}
-          className={`p-2 rounded ${editor.isActive('orderedList') ? 'bg-blue-200' : 'hover:bg-gray-200'}`}
-          title="Ordered List"
-        >
-          <ListOrdered className="h-4 w-4 text-gray-700" />
-        </button>
-        <button
-          type="button"
-          onClick={() => editor.chain().focus().setParagraph().run()}
-          className={`p-2 rounded ${editor.isActive('paragraph') ? 'bg-blue-200' : 'hover:bg-gray-200'}`}
-          title="Paragraph"
-        >
-          <Pilcrow className="h-4 w-4 text-gray-700" />
-        </button>
-        <button
-          type="button"
-          onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}
-          className={`p-2 rounded ${editor.isActive('heading', { level: 1 }) ? 'bg-blue-200' : 'hover:bg-gray-200'}`}
-          title="Heading 1"
-        >
-          <Heading1 className="h-4 w-4 text-gray-700" />
-        </button>
-        <button
-          type="button"
-          onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
-          className={`p-2 rounded ${editor.isActive('heading', { level: 1 }) ? 'bg-blue-200' : 'hover:bg-gray-200'}`}
-          title="Heading 2"
-        >
-          <Heading2 className="h-4 w-4 text-gray-700" />
-        </button>
-        <button
-          type="button"
-          onClick={setLink}
-          className={`p-2 rounded ${editor.isActive('link') ? 'bg-blue-200' : 'hover:bg-gray-200'}`}
-          title="Set Link"
-        >
-          <Link className="h-4 w-4 text-gray-700" />
-        </button>
-        <button
-          type="button"
-          onClick={addImage}
-          className="p-2 rounded hover:bg-gray-200"
-          title="Add Image by URL"
-        >
-          <Image className="h-4 w-4 text-gray-700" />
-        </button>
-      </div>
-      <EditorContent editor={editor} className="tiptap-editor-content" />
-    </div>
-  );
-};
-
-
+const TiptapEditor = dynamic(() => import('../../../components/TiptapEditor'), { ssr: false });
 export default function NewPost() {
   const router = useRouter();
   const [user, setUser] = useState<any>(null);

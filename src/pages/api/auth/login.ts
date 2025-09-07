@@ -23,6 +23,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const client = await clientPromise;
     const db = client.db('bie-website');
     const user = await db.collection('users').findOne({ email: String(email).toLowerCase() });
+    if (user && user.status !== 'active') {
+      return res.status(403).json({ error: 'Account not active. Please wait for super-admin approval.' });
+    }
 
     if (!user) {
       return res.status(401).json({ error: 'Invalid credentials' });

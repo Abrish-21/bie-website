@@ -99,18 +99,23 @@ async function handleCreatePost(req: NextApiRequest, res: NextApiResponse, db: a
       });
     }
 
+    // Fetch user info for author fields
+    const user = await db.collection('users').findOne({ _id: new ObjectId(decoded.userId) });
+    if (!user) {
+      return res.status(401).json({ error: 'Invalid user' });
+    }
     const post = {
       title,
       excerpt: excerpt || '',
       content,
-      imageUrl, // <-- ADDED THIS
+      imageUrl,
       category,
       readTime: String(readTime),
       tags: tags || [],
       type,
       isDraft: isDraft || false,
-      author: author || (decoded.role === 'superadmin' ? 'Super Admin' : 'Content Admin'),
-      authorId: authorId || new ObjectId(decoded.userId),
+      author: user.name,
+      authorId: user._id,
       publishDate: new Date(),
       views: 0,
       slug: title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, ''),

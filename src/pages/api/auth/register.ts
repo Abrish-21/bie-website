@@ -11,25 +11,26 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    const { name, email, password, role = 'admin' } = req.body;
+  const { username, name, email, password, role } = req.body;
 
-    if (!name || !email || !password) {
-      return res.status(400).json({ error: 'Name, email, and password are required' });
+    if (!username || !name || !email || !password || !role) {
+      return res.status(400).json({ error: 'Username, name, email, password and role are required' });
     }
 
-    if (role !== 'admin' && role !== 'superadmin') {
-      return res.status(400).json({ error: 'Role must be either admin or superadmin' });
-    }
+
 
     // Get client and database using clientPromise
     const client = await clientPromise;
     const db = client.db('bie-website'); // Specify your database name
 
     // Check if user already exists
-    const existingUser = await db.collection('users').findOne({ email: String(email).toLowerCase() });
+    const existingUser = await db.collection('users').findOne({ $or: [
+      { email: String(email).toLowerCase() },
+      { username: String(username) }
+    ] });
     if (existingUser) {
       // Return a 409 Conflict status if user already exists
-      return res.status(409).json({ error: 'User with this email already exists' });
+      return res.status(409).json({ error: 'User with this email or username already exists' });
     }
 
     // Hash password
@@ -37,10 +38,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     // Insert new user into the 'users' collection
     const newUser = {
+      username,
       name,
       email: String(email).toLowerCase(),
       password: hashedPassword,
-      role,
+      role: 'admin',
+      status: 'pending',
       createdAt: new Date(),
       updatedAt: new Date(),
     };
