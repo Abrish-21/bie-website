@@ -30,15 +30,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(409).json({ error: 'User with this email or username already exists' });
     }
 
-    // Hash the user's password for security
-    const hashedPassword = await bcrypt.hash(password, 12);
-
     // Create a new user instance using the Mongoose model
+    // Password will be automatically hashed by the User model's pre-save hook
     const user = new User({
       username,
       name,
       email: email.toLowerCase(),
-      password: hashedPassword,
+      password: password, // Raw password - will be hashed by pre-save hook
       role: 'admin', // Role is hardcoded to 'admin' for public registration
       status: 'pending',     // New users must be verified by a super-admin
     });
