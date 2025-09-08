@@ -1,22 +1,22 @@
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/router';
+import { LogOut } from 'lucide-react';
 
 export default function SuperAdminDashboard() {
   const [pendingUsers, setPendingUsers] = useState([]);
   const [error, setError] = useState('');
-  const [token, setToken] = useState('');
+  const router = useRouter();
 
   useEffect(() => {
-    // Assume token is stored in localStorage after super-admin login
-    const t = localStorage.getItem('authToken');
-    setToken(t || '');
-    if (t) fetchPendingUsers(t);
+    // Middleware now protects this page, so we can assume the user is authenticated.
+    // We can fetch the user data if needed, or just perform actions.
+    fetchPendingUsers();
   }, []);
 
-  const fetchPendingUsers = async (token: string) => {
+  const fetchPendingUsers = async () => {
     setError('');
-    const res = await fetch('/api/admin/verify', {
-      headers: { Authorization: `Bearer ${token}` }
-    });
+    // The token is sent via cookie automatically by the browser
+    const res = await fetch('/api/admin/verify');
     const data = await res.json();
     if (!res.ok) setError(data.error || 'Failed to fetch users');
     else setPendingUsers(data.users || []);
@@ -28,18 +28,37 @@ export default function SuperAdminDashboard() {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`
       },
       body: JSON.stringify({ userId, status: 'active' })
     });
     const data = await res.json();
     if (!res.ok) setError(data.error || 'Failed to approve user');
-    else fetchPendingUsers(token);
+    else fetchPendingUsers();
+  };
+
+  const handleLogout = async () => {
+    try {
+      await fetch('/api/auth/logout', { method: 'POST' });
+    } catch (error) {
+      console.error('Logout failed', error);
+    } finally {
+      localStorage.removeItem('user');
+      router.push('/admin/login');
+    }
   };
 
   return (
     <div className="min-h-screen bg-gray-50 p-8">
-      <h2 className="text-2xl font-bold mb-6">Super Admin Verification Panel</h2>
+      <div className="flex justify-between items-center mb-6">
+        <h2 className="text-2xl font-bold">Super Admin Verification Panel</h2>
+        <button
+          onClick={handleLogout}
+          className="flex items-center space-x-2 text-gray-600 hover:text-gray-800 transition-colors"
+        >
+          <LogOut className="h-5 w-5" />
+          <span>Logout</span>
+        </button>
+      </div>
       {error && <div className="text-red-500 mb-4">{error}</div>}
       <table className="w-full bg-white rounded shadow-md">
         <thead>
@@ -72,3 +91,4 @@ export default function SuperAdminDashboard() {
     </div>
   );
 }
+

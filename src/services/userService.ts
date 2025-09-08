@@ -1,4 +1,4 @@
-import User, * as UserModel from '../models/User.ts';
+import User, * as UserModel from '../models/User';
 
 import jwt from 'jsonwebtoken';
 

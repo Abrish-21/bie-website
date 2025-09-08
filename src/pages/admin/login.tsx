@@ -15,18 +15,19 @@ const AdminLogin = () => {
     setError('');
 
     try {
-      const { user, token } = await authAPI.login(email, password);
+      const { user } = await authAPI.login(email, password);
       
-      console.log('Login successful:', { user, token: !!token });
+      console.log('Login successful:', { user });
       
-      // Store auth data
-      localStorage.setItem('authToken', token);
+      // Store user data in localStorage so the dashboard can access it
       localStorage.setItem('user', JSON.stringify(user));
       
-      console.log('Auth data stored in localStorage');
-      
-      // Redirect to admin dashboard
-      await router.push('/admin/dashboard');
+      // Redirect based on role
+      if (user.role === 'superadmin') {
+        await router.push('/super-admin/dashboard');
+      } else {
+        await router.push('/admin/dashboard');
+      }
     } catch (error: any) {
       console.error('Login error:', error);
       setError(error.response?.data?.error || error.message || 'Login failed');

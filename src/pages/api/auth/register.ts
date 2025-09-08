@@ -1,9 +1,8 @@
-// src/pages/api/auth/register.ts
-
 import { NextApiRequest, NextApiResponse } from 'next';
 import bcrypt from 'bcryptjs';
-import clientPromise from '../../../lib/mongodb'; // Import clientPromise for native driver access
-// Removed import for connectDB and UserService for direct MongoDB driver usage
+// FIX: Correcting the import path.
+import dbConnect from '../../../lib/dbConnect';
+import User from '../../../models/User';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
@@ -11,56 +10,47 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-  const { username, name, email, password, role } = req.body;
+    // Establish database connection
+    await dbConnect();
 
-    if (!username || !name || !email || !password || !role) {
-      return res.status(400).json({ error: 'Username, name, email, password and role are required' });
+    // Destructure user data from the request body. 'role' is removed.
+    const { username, name, email, password } = req.body;
+
+    // Validate that all required fields are present
+    if (!username || !name || !email || !password) {
+      return res.status(400).json({ error: 'Username, name, email, and password are required.' });
     }
 
+    // Check if a user with the same email or username already exists
+    const existingUser = await User.findOne({
+      $or: [{ email: email.toLowerCase() }, { username }],
+    });
 
-
-    // Get client and database using clientPromise
-    const client = await clientPromise;
-    const db = client.db('bie-website'); // Specify your database name
-
-    // Check if user already exists
-    const existingUser = await db.collection('users').findOne({ $or: [
-      { email: String(email).toLowerCase() },
-      { username: String(username) }
-    ] });
     if (existingUser) {
-      // Return a 409 Conflict status if user already exists
       return res.status(409).json({ error: 'User with this email or username already exists' });
     }
 
-    // Hash password
-    const hashedPassword = await bcrypt.hash(password, 10); // Use 10 salt rounds for bcrypt
+    // Hash the user's password for security
+    const hashedPassword = await bcrypt.hash(password, 12);
 
-    // Insert new user into the 'users' collection
-    const newUser = {
+    // Create a new user instance using the Mongoose model
+    const user = new User({
       username,
       name,
-      email: String(email).toLowerCase(),
+      email: email.toLowerCase(),
       password: hashedPassword,
-      role: 'admin',
-      status: 'pending',
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    };
-
-    const result = await db.collection('users').insertOne(newUser);
-
-    // Return the created user without the password
-    const { password: _, ...userWithoutPassword } = newUser;
-    res.status(201).json({
-      message: 'User created successfully',
-      user: { _id: result.insertedId, ...userWithoutPassword } // Include the generated _id
+      role: 'admin', // Role is hardcoded to 'admin' for public registration
+      status: 'pending',     // New users must be verified by a super-admin
     });
-  } catch (error) { // Type is inferred as 'unknown'
+
+    // Save the new user to the database
+    await user.save();
+
+    // Send a success response
+    res.status(201).json({ message: 'Registration successful. Your account is pending approval.' });
+
+  } catch (error) {
     console.error('Registration error:', error);
-    if (error instanceof Error && error.message === 'User with this email already exists') {
-      return res.status(409).json({ error: error.message }); // Use 409 for conflict
-    }
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ error: 'An internal server error occurred during registration.' });
   }
 }

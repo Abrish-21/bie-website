@@ -1,8 +1,14 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import jwt from 'jsonwebtoken';
-import User, { IUser } from '../models/User.ts'; // <-- Corrected import path
+import User, { IUser } from '../models/User';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
+const JWT_SECRET = process.env.JWT_SECRET;
+
+if (!JWT_SECRET) {
+  throw new Error('JWT_SECRET is not defined in environment variables.');
+}
+
+export type UserRole = 'superadmin' | 'admin' | 'content-admin' | 'user';
 
 export interface AuthenticatedRequest extends NextApiRequest {
   user?: IUser;
@@ -14,14 +20,22 @@ export const authenticateToken = async (
 ) => {
   try {
     const authHeader = req.headers.authorization;
-    const token = authHeader && authHeader.split(' ')[1];
 
-    if (!token) {
-      return res.status(401).json({ error: 'Access token required' });
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res
+        .status(401)
+        .json({ error: 'Authorization header is missing or malformed' });
     }
 
-    const decoded = jwt.verify(token, JWT_SECRET) as { userId: string };
-    const user = await User.findById(decoded.userId).select('-password');
+    const token = authHeader.split(' ')[1];
+
+    const decoded = jwt.verify(token, JWT_SECRET);
+
+    if (typeof decoded !== 'object' || !('userId' in decoded)) {
+      return res.status(401).json({ error: 'Invalid token' });
+    }
+
+    const user = await User.findById((decoded as { userId: string }).userId).select('-password');
 
     if (!user) {
       return res.status(401).json({ error: 'Invalid token' });
@@ -30,17 +44,18 @@ export const authenticateToken = async (
     req.user = user;
     return null; // Return null to signal success
   } catch (error) {
+    console.error('Authentication error:', error);
     return res.status(401).json({ error: 'Invalid token' });
   }
 };
 
-export const requireRole = (allowedRoles: ('admin' | 'superadmin')[]) => {
+export const requireRole = (allowedRoles: UserRole[]) => {
   return (req: AuthenticatedRequest) => {
     if (!req.user) {
       return 'Authentication required';
     }
 
-    if (!allowedRoles.includes(req.user.role)) {
+    if (!allowedRoles.includes(req.user.role as UserRole)) {
       return 'Insufficient permissions';
     }
 

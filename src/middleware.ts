@@ -1,54 +1,64 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { jwtVerify } from 'jose';
 
-export function middleware(request: NextRequest) {
-  const url = request.nextUrl;
-  const hostHeader = request.headers.get('host') || '';
+const JWT_SECRET = new TextEncoder().encode(process.env.JWT_SECRET || 'your-secret-key');
 
-  const [hostname, port] = hostHeader.split(':');
-  const isAdminSubdomain = hostname?.toLowerCase().startsWith('admin.');
-  const isAdminPort = port === '3002';
-
-  // Never interfere with API routes
-  if (url.pathname.startsWith('/api')) {
-    return NextResponse.next();
+async function verifyToken(token: string) {
+  try {
+    const { payload } = await jwtVerify(token, JWT_SECRET);
+    return payload as { userId: string; role: string };
+  } catch (error) {
+    return null;
   }
+}
 
-  // Only handle admin subdomain/port if explicitly configured
-  if (isAdminSubdomain || isAdminPort) {
-    // On admin subdomain, ensure all routes are served from /admin
-    if (url.pathname === '/') {
-      const rewriteUrl = url.clone();
-      rewriteUrl.pathname = '/admin/login';
-      return NextResponse.rewrite(rewriteUrl);
+export async function middleware(request: NextRequest) {
+  const { pathname } = request.nextUrl;
+  const token = request.cookies.get('authToken')?.value;
+
+  // Define public paths that don't require authentication
+  const publicPaths = ['/admin/login', '/admin/register'];
+
+  // Check if the user is trying to access a protected route
+  if (pathname.startsWith('/admin') || pathname.startsWith('/super-admin')) {
+    // If the path is public, let them through.
+    if (publicPaths.includes(pathname)) {
+      // If authenticated and trying to access login, redirect to dashboard
+      if (token && pathname === '/admin/login') {
+        const user = await verifyToken(token);
+        if (user) {
+          const targetDashboard = user.role === 'superadmin' ? '/super-admin/dashboard' : '/admin/dashboard';
+          return NextResponse.redirect(new URL(targetDashboard, request.url));
+        }
+      }
+      return NextResponse.next();
     }
-    if (!url.pathname.startsWith('/admin')) {
-      const rewriteUrl = url.clone();
-      rewriteUrl.pathname = `/admin${url.pathname}`;
-      return NextResponse.rewrite(rewriteUrl);
+
+    // If no token, redirect to login
+    if (!token) {
+      return NextResponse.redirect(new URL('/admin/login', request.url));
     }
-    return NextResponse.next();
-  }
 
-  // Coming Soon rewrites for main site sections
-  const comingSoonSections = [
-    '/business-pulse',
-    '/insight-center',
-    '/economy-explained',
-    '/opportunities',
-    '/opprtunities',
-  ];
+    const user = await verifyToken(token);
 
-  if (comingSoonSections.some((prefix) => url.pathname === prefix || url.pathname.startsWith(prefix + '/'))) {
-    const rewriteUrl = url.clone();
-    rewriteUrl.pathname = '/coming-soon';
-    return NextResponse.rewrite(rewriteUrl);
+    // If token is invalid, redirect to login and clear cookie
+    if (!user) {
+      const response = NextResponse.redirect(new URL('/admin/login', request.url));
+      response.cookies.delete('authToken');
+      return response;
+    }
+
+    // Super-admin access control
+    if (pathname.startsWith('/super-admin') && user.role !== 'superadmin') {
+      return NextResponse.redirect(new URL('/admin/dashboard', request.url));
+    }
   }
 
   return NextResponse.next();
 }
 
 export const config = {
-  matcher: ['/((?!_next/static|_next/image|favicon.ico).*)'],
+  matcher: ['/admin/:path*', '/super-admin/:path*'],
 };
 
 

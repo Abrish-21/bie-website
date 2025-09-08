@@ -34,25 +34,22 @@ export default function AdminDashboard() {
   const [showUserDeleteConfirm, setShowUserDeleteConfirm] = useState<string | null>(null);
 
   useEffect(() => {
-    const token = localStorage.getItem('authToken');
     const userData = localStorage.getItem('user');
     
-    console.log('Dashboard auth check:', { token: !!token, userData: !!userData });
-    
-    if (!token || !userData) {
-      console.log('No auth data found, redirecting to login');
-      router.push('/admin/login');
-      return;
+    if (userData) {
+      try {
+        const parsedUser = JSON.parse(userData);
+        setUser(parsedUser);
+      } catch (error) {
+        console.error('Error parsing user data:', error);
+        router.push('/admin/login');
+      }
+    } else {
+      // If no user data is found, stop loading and rely on the component's
+      // logic to show the "not signed in" message and login button.
+      setLoading(false);
     }
-
-    try {
-      const parsedUser = JSON.parse(userData);
-      console.log('User parsed successfully:', parsedUser);
-      setUser(parsedUser);
-    } catch (error) {
-      console.error('Error parsing user data:', error);
-      router.push('/admin/login');
-    }
+    // The middleware now handles the auth check, so we can remove the token check here.
   }, [router]);
 
   useEffect(() => {
@@ -81,10 +78,15 @@ export default function AdminDashboard() {
     }
   };
 
-  const handleLogout = () => {
-    localStorage.removeItem('authToken');
-    localStorage.removeItem('user');
-    router.push('/admin/login');
+  const handleLogout = async () => {
+    try {
+      await fetch('/api/auth/logout', { method: 'POST' });
+    } catch (error) {
+      console.error('Logout failed', error);
+    } finally {
+      localStorage.removeItem('user');
+      router.push('/admin/login');
+    }
   };
 
   const handleDeletePost = async (postId: string) => {

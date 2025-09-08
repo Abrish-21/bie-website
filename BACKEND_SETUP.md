@@ -60,8 +60,9 @@ npm run dev
 ## API Endpoints
 
 ### Authentication
-- `POST /api/auth/login` - User login
-- `POST /api/auth/register` - Create new user (superadmin only)
+- `POST /api/auth/login` - User login. Sets an `HttpOnly` cookie `authToken`.
+- `POST /api/auth/logout` - User logout. Clears the `authToken` cookie.
+- `POST /api/auth/register` - Create new user. Their status will be 'pending' until approved by a superadmin.
 
 ### Posts
 - `GET /api/posts` - Get all posts (supports filtering by tag, type, category)
@@ -73,18 +74,21 @@ npm run dev
 - `GET /api/posts/tags` - Get all unique tags
 - `GET /api/posts/categories` - Get all unique categories
 
-### Users (Superadmin only)
+### Users & Verification (Superadmin only)
 - `GET /api/users` - Get all users
 - `POST /api/users` - Create new user
 - `GET /api/users/[id]` - Get user by ID
 - `PUT /api/users/[id]` - Update user
 - `DELETE /api/users/[id]` - Delete user
+- `GET /api/admin/verify` - Get all users with 'pending' status.
+- `PUT /api/admin/verify` - Approve a user by updating their status to 'active'.
 
 ## User Roles
 
 ### Superadmin
 - Can create, update, and delete other admins
 - Can delete any post
+- Can approve new user registrations
 - Full access to all features
 
 ### Admin
@@ -94,11 +98,7 @@ npm run dev
 
 ## Authentication
 
-The backend uses JWT tokens for authentication. Include the token in the Authorization header:
-
-```
-Authorization: Bearer <your-jwt-token>
-```
+The backend uses JWT for authentication. Upon successful login, an `HttpOnly` cookie named `authToken` is set in the user's browser. This cookie is automatically sent with subsequent requests to the API, authenticating the user for protected routes and actions. This method is more secure than storing tokens in `localStorage`.
 
 ## Frontend Integration
 
@@ -116,9 +116,9 @@ const { posts } = await postsAPI.getAll();
 const { posts } = await postsAPI.getAll({ tag: 'technology' });
 
 // Login
-const { user, token } = await authAPI.login('admin@bie-website.com', 'admin123');
+const { user } = await authAPI.login('admin@bie-website.com', 'admin123');
 
-// Create post (requires authentication)
+// Create post (requires authentication via cookie)
 const newPost = await postsAPI.create({
   title: 'New Post',
   excerpt: 'Post excerpt',
@@ -130,8 +130,9 @@ const newPost = await postsAPI.create({
 ## Security Features
 
 - Password hashing with bcrypt
-- JWT token authentication
+- JWT authentication via secure `HttpOnly` cookies
 - Role-based access control
+- CSRF protection (Next.js middleware with `SameSite=Lax` cookie)
 - Input validation and sanitization
 - MongoDB injection protection (via Mongoose)
 

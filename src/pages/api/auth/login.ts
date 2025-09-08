@@ -4,7 +4,7 @@ import { NextApiRequest, NextApiResponse } from 'next';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
 
-import clientPromise from '../../../lib/mongodb.ts'; 
+import clientPromise from '../../../lib/mongodb';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
 
@@ -50,8 +50,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const token = jwt.sign({ userId: user._id.toString(), role: user.role }, JWT_SECRET, { expiresIn: '7d' });
 
+    // Set token in an HTTP-only cookie
+    res.setHeader('Set-Cookie', `authToken=${token}; HttpOnly; Path=/; Max-Age=604800; SameSite=Lax`);
+
     const { password: _, ...userWithoutPassword } = user;
-    res.status(200).json({ message: 'Login successful', user: userWithoutPassword, token });
+    res.status(200).json({ message: 'Login successful', user: userWithoutPassword });
   } catch (error: any) {
     console.error('Login error:', error);
     res.status(500).json({ error: 'Internal server error' });

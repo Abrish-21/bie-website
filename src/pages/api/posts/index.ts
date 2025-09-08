@@ -1,140 +1,91 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import jwt from 'jsonwebtoken';
-import clientPromise from '../../../lib/mongodb';
-import { ObjectId } from 'mongodb';
+import dbConnect from '../../../lib/dbConnect';
+import Post from '../../../models/Post';
+import User from '../../../models/User';
+import { authMiddleware, AuthenticatedRequest } from '../../../lib/auth';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
+async function handler(req: AuthenticatedRequest, res: NextApiResponse) {
+  await dbConnect();
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  try {
-    const client = await clientPromise;
-    const db = client.db("bie-website");
-    
-    switch (req.method) {
-      case 'GET':
-        return await handleGetPosts(req, res, db);
-      case 'POST':
-        return await handleCreatePost(req, res, db);
-      default:
-        return res.status(405).json({ error: 'Method not allowed' });
-    }
-  } catch (error: any) {
-    console.error('Posts API error:', error);
-    res.status(500).json({ error: error?.message || 'Internal server error' });
+  switch (req.method) {
+    case 'GET':
+      return handleGetPosts(req, res);
+    case 'POST':
+      return authMiddleware(handleCreatePost)(req, res);
+    default:
+      res.setHeader('Allow', ['GET', 'POST']);
+      return res.status(405).json({ error: 'Method not allowed' });
   }
 }
 
-async function handleGetPosts(req: NextApiRequest, res: NextApiResponse, db: any) {
+async function handleGetPosts(req: NextApiRequest, res: NextApiResponse) {
   try {
-    const { tag, type, category } = req.query;
-    const limitNum = req.query.limit ? parseInt(req.query.limit as string) : 10;
-    const skipNum = req.query.skip ? parseInt(req.query.skip as string) : 0;
+    const { tag, type, category, limit = '10', skip = '0' } = req.query;
+    const limitNum = parseInt(limit as string);
+    const skipNum = parseInt(skip as string);
 
     let query: any = {};
-    
-    if (tag) {
-      query.tags = { $in: [tag] };
-    }
-    
-    if (type) {
-      query.type = type;
-    }
-    
-    if (category) {
-      query.category = category;
-    }
+    if (tag) query.tags = { $in: [tag] };
+    if (type) query.type = type;
+    if (category) query.category = category;
 
     const [posts, total] = await Promise.all([
-      db.collection("posts")
-        .find(query)
+      Post.find(query)
         .sort({ publishDate: -1 })
         .limit(limitNum)
         .skip(skipNum)
-        .toArray(),
-      db.collection("posts").countDocuments(query)
+        .populate('authorId', 'name')
+        .lean(),
+      Post.countDocuments(query)
     ]);
 
     res.status(200).json({
-      posts,
+      posts: posts.map(p => ({ ...p, author: (p.authorId as any)?.name || 'Unknown' })),
       total,
       hasMore: skipNum + posts.length < total,
     });
   } catch (error: any) {
     console.error('Failed to fetch posts', error);
-    res.status(500).json({ error: error?.message || 'Failed to fetch posts' });
+    res.status(500).json({ error: 'Failed to fetch posts' });
   }
 }
 
-async function handleCreatePost(req: NextApiRequest, res: NextApiResponse, db: any) {
+async function handleCreatePost(req: AuthenticatedRequest, res: NextApiResponse) {
   try {
-    const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return res.status(401).json({ error: 'Access token required' });
-    }
-
-    const token = authHeader.split(' ')[1];
-    const decoded = jwt.verify(token, JWT_SECRET) as { userId: string; role: string };
-    if (decoded.role !== 'admin' && decoded.role !== 'superadmin') {
+    if (req.user?.role !== 'admin' && req.user?.role !== 'superadmin') {
       return res.status(403).json({ error: 'Admin access required' });
     }
 
-    const {
-      title,
-      excerpt,
-      content,
-      imageUrl, // <-- ADDED THIS
-      category,
-      readTime, // <-- ADDED THIS
-      tags,
-      type,
-      isDraft,
-      author,
-      authorId,
-    } = req.body;
+    const { title, content, imageUrl, category, type, readTime, tags, isDraft } = req.body;
 
-    // Validate that all required fields are present
     if (!title || !content || !imageUrl || !category || !type || !readTime) {
       return res.status(400).json({ 
-        error: 'Missing required fields. Please provide: title, content, imageUrl, category, type, and readTime' 
+        error: 'Missing required fields: title, content, imageUrl, category, type, and readTime are required.' 
       });
     }
 
-    // Fetch user info for author fields
-    const user = await db.collection('users').findOne({ _id: new ObjectId(decoded.userId) });
-    if (!user) {
+    const author = await User.findById(req.user.userId);
+    if (!author) {
       return res.status(401).json({ error: 'Invalid user' });
     }
-    const post = {
-      title,
-      excerpt: excerpt || '',
-      content,
-      imageUrl,
-      category,
-      readTime: String(readTime),
-      tags: tags || [],
-      type,
-      isDraft: isDraft || false,
-      author: user.name,
-      authorId: user._id,
-      publishDate: new Date(),
-      views: 0,
-      slug: title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, ''),
-      createdAt: new Date(),
-      updatedAt: new Date()
-    };
 
-    const result = await db.collection("posts").insertOne(post);
-    const createdPost = { ...post, _id: result.insertedId };
+    const post = new Post({
+      ...req.body,
+      authorId: author._id,
+      author: author.name,
+      slug: title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, ''),
+    });
+
+    await post.save();
 
     res.status(201).json({
       message: 'Post created successfully',
-      post: createdPost,
+      post,
     });
   } catch (error: any) {
     console.error('Create post error:', error);
-    if (error.name === 'JsonWebTokenError') {
-      return res.status(401).json({ error: 'Invalid token' });
-    }
     res.status(500).json({ error: 'Failed to create post' });
   }
 }
+
+export default handler;

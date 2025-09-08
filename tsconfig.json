@@ -14,11 +14,10 @@
     "isolatedModules": true,
     "jsx": "preserve",
     "incremental": true,
-    "allowImportingTsExtensions": true,
     "paths": {
       "@/*": ["./src/*"]
     }
   },
-  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", "src/pages/business-pulse/index.jsx", "server.js", "server.js"],
+  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", "src/pages/business-pulse/index.jsx", "server.js"],
   "exclude": ["node_modules"]
 }

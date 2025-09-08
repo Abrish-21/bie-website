@@ -1,7 +1,7 @@
 // migrateData.ts
 import bcrypt from 'bcryptjs';
 import { ObjectId } from 'mongodb';
-import clientPromise from '../lib/mongodb.ts';
+import clientPromise from '../lib/mongodb';
 
 async function migrateData() {
   try {

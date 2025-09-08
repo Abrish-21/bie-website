@@ -1,85 +1,60 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import jwt from 'jsonwebtoken';
-import clientPromise from '../../../lib/mongodb';
-import { ObjectId } from 'mongodb';
+import dbConnect from '../../../lib/dbConnect';
+import Post from '../../../models/Post';
+import { authMiddleware, AuthenticatedRequest } from '../../../lib/auth';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
+async function handler(req: AuthenticatedRequest, res: NextApiResponse) {
+  await dbConnect();
+  const { id } = req.query;
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  try {
-    const client = await clientPromise;
-    const db = client.db("bie-website");
+  if (typeof id !== 'string') {
+    return res.status(400).json({ error: 'Invalid post ID' });
+  }
 
-    switch (req.method) {
-      case 'GET':
-        return await handleGetPost(req, res, db);
-      case 'PUT':
-        return await handleUpdatePost(req, res, db);
-      case 'DELETE':
-        return await handleDeletePost(req, res, db);
-      default:
-        return res.status(405).json({ error: 'Method not allowed' });
-    }
-  } catch (error: any) {
-    console.error('Post API error:', error);
-    res.status(500).json({ error: 'Internal server error' });
+  switch (req.method) {
+    case 'GET':
+      return handleGetPost(req, res, id);
+    case 'PUT':
+      return authMiddleware(handleUpdatePost)(req, res);
+    case 'DELETE':
+      return authMiddleware(handleDeletePost)(req, res);
+    default:
+      res.setHeader('Allow', ['GET', 'PUT', 'DELETE']);
+      return res.status(405).json({ error: 'Method not allowed' });
   }
 }
 
-async function handleGetPost(req: NextApiRequest, res: NextApiResponse, db: any) {
+async function handleGetPost(req: NextApiRequest, res: NextApiResponse, id: string) {
   try {
-    const { id } = req.query as { id: string };
-    if (!ObjectId.isValid(id)) {
-      return res.status(400).json({ error: 'Invalid post id' });
-    }
-    const post = await db.collection("posts").findOne({ _id: new ObjectId(id) });
+    const post = await Post.findById(id).lean();
     if (!post) {
       return res.status(404).json({ error: 'Post not found' });
     }
     res.status(200).json({ post });
   } catch (error: any) {
+    console.error('Failed to fetch post', error);
     res.status(500).json({ error: 'Failed to fetch post' });
   }
 }
 
-async function handleUpdatePost(req: NextApiRequest, res: NextApiResponse, db: any) {
+async function handleUpdatePost(req: AuthenticatedRequest, res: NextApiResponse) {
+  const { id } = req.query as { id: string };
+
   try {
-    const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return res.status(401).json({ error: 'Access token required' });
-    }
-
-    const token = authHeader.split(' ')[1];
-    let decoded: any;
-    try {
-      decoded = jwt.verify(token, JWT_SECRET) as { userId: string; role: string };
-    } catch {
-      return res.status(401).json({ error: 'Invalid token' });
-    }
-
-    const { id } = req.query as { id: string };
-    if (!ObjectId.isValid(id)) {
-      return res.status(400).json({ error: 'Invalid post id' });
-    }
-
-    const updateData = req.body || {};
-    updateData.updatedAt = new Date();
-
-    const existing = await db.collection("posts").findOne({ _id: new ObjectId(id) });
-    if (!existing) {
+    const post = await Post.findById(id);
+    if (!post) {
       return res.status(404).json({ error: 'Post not found' });
     }
 
-    if (existing.authorId?.toString && existing.authorId.toString() !== decoded.userId && decoded.role !== 'superadmin') {
+    if (post.authorId.toString() !== req.user!.userId && req.user!.role !== 'superadmin') {
       return res.status(403).json({ error: 'You can only update your own posts' });
     }
 
-    await db.collection("posts").updateOne({ _id: new ObjectId(id) }, { $set: updateData });
-    const post = await db.collection("posts").findOne({ _id: new ObjectId(id) });
+    const updatedPost = await Post.findByIdAndUpdate(id, req.body, { new: true, runValidators: true });
 
     res.status(200).json({
       message: 'Post updated successfully',
-      post
+      post: updatedPost,
     });
   } catch (error: any) {
     console.error('Update post error:', error);
@@ -87,36 +62,20 @@ async function handleUpdatePost(req: NextApiRequest, res: NextApiResponse, db: a
   }
 }
 
-async function handleDeletePost(req: NextApiRequest, res: NextApiResponse, db: any) {
+async function handleDeletePost(req: AuthenticatedRequest, res: NextApiResponse) {
+  const { id } = req.query as { id: string };
+
   try {
-    const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return res.status(401).json({ error: 'Access token required' });
-    }
-
-    const token = authHeader.split(' ')[1];
-    let decoded: any;
-    try {
-      decoded = jwt.verify(token, JWT_SECRET) as { userId: string; role: string };
-    } catch {
-      return res.status(401).json({ error: 'Invalid token' });
-    }
-
-    const { id } = req.query as { id: string };
-    if (!ObjectId.isValid(id)) {
-      return res.status(400).json({ error: 'Invalid post id' });
-    }
-
-    const existing = await db.collection("posts").findOne({ _id: new ObjectId(id) });
-    if (!existing) {
+    const post = await Post.findById(id);
+    if (!post) {
       return res.status(404).json({ error: 'Post not found' });
     }
 
-    if (existing.authorId?.toString && existing.authorId.toString() !== decoded.userId && decoded.role !== 'superadmin') {
+    if (post.authorId.toString() !== req.user!.userId && req.user!.role !== 'superadmin') {
       return res.status(403).json({ error: 'You can only delete your own posts' });
     }
 
-    await db.collection("posts").deleteOne({ _id: new ObjectId(id) });
+    await Post.findByIdAndDelete(id);
 
     res.status(200).json({
       message: 'Post deleted successfully'
@@ -126,3 +85,5 @@ async function handleDeletePost(req: NextApiRequest, res: NextApiResponse, db: a
     res.status(500).json({ error: 'Failed to delete post' });
   }
 }
+
+export default handler;
