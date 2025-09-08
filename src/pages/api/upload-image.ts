@@ -41,9 +41,9 @@ export default async function uploadImageHandler(req: NextApiRequest, res: NextA
     return res.status(405).json({ error: 'Method Not Allowed' });
   }
 
-  // Authentication check
-  const authHeader = req.headers.authorization;
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    // Authentication check
+  const { authToken } = req.cookies;
+  if (!authToken) {
     return res.status(401).json({ error: 'Unauthorized: No authentication token provided.' });
   }
 

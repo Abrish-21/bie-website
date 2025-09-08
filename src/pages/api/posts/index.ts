@@ -1,17 +1,58 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import dbConnect from '../../../lib/dbConnect';
 import Post from '../../../models/Post';
-import User from '../../../models/User';
-import { authMiddleware, AuthenticatedRequest } from '../../../lib/auth';
+import { verify } from 'jsonwebtoken';
+import { JwtPayload } from 'jsonwebtoken';
 
-async function handler(req: AuthenticatedRequest, res: NextApiResponse) {
+const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
+
+// Auth middleware for protected routes
+interface AuthRequest extends NextApiRequest {
+  user?: JwtPayload;
+}
+
+type AuthHandler = (req: AuthRequest, res: NextApiResponse) => Promise<void>;
+
+const auth = (handler: AuthHandler) => async (req: AuthRequest, res: NextApiResponse) => {
+  const { authToken } = req.cookies;
+
+  if (!authToken) {
+    return res.status(401).json({ error: 'Unauthorized: No authentication token provided.' });
+  }
+
+  try {
+    const decoded = verify(authToken, JWT_SECRET) as JwtPayload;
+    req.user = decoded; // Attach user info to the request
+    return handler(req, res);
+  } catch (error) {
+    return res.status(401).json({ error: 'Unauthorized: Invalid token.' });
+  }
+};
+
+async function handler(req: NextApiRequest, res: NextApiResponse) {
   await dbConnect();
 
   switch (req.method) {
     case 'GET':
       return handleGetPosts(req, res);
     case 'POST':
-      return authMiddleware(handleCreatePost)(req, res);
+      // We need to wrap the post logic in the auth middleware
+      return auth(async (req, res) => {
+        try {
+          if (!req.user) {
+            return res.status(401).json({ success: false, error: 'Unauthorized: User information missing.' });
+          }
+          const post = await Post.create({ ...req.body, author: req.user.userId });
+          res.status(201).json({ success: true, data: post });
+        } catch (error) {
+          if (error instanceof Error) {
+            res.status(400).json({ success: false, error: error.message });
+          } else {
+            res.status(400).json({ success: false, error: 'An unknown error occurred.' });
+          }
+        }
+      })(req, res);
+
     default:
       res.setHeader('Allow', ['GET', 'POST']);
       return res.status(405).json({ error: 'Method not allowed' });
@@ -47,44 +88,6 @@ async function handleGetPosts(req: NextApiRequest, res: NextApiResponse) {
   } catch (error: any) {
     console.error('Failed to fetch posts', error);
     res.status(500).json({ error: 'Failed to fetch posts' });
-  }
-}
-
-async function handleCreatePost(req: AuthenticatedRequest, res: NextApiResponse) {
-  try {
-    if (req.user?.role !== 'admin' && req.user?.role !== 'superadmin') {
-      return res.status(403).json({ error: 'Admin access required' });
-    }
-
-    const { title, content, imageUrl, category, type, readTime, tags, isDraft } = req.body;
-
-    if (!title || !content || !imageUrl || !category || !type || !readTime) {
-      return res.status(400).json({ 
-        error: 'Missing required fields: title, content, imageUrl, category, type, and readTime are required.' 
-      });
-    }
-
-    const author = await User.findById(req.user.userId);
-    if (!author) {
-      return res.status(401).json({ error: 'Invalid user' });
-    }
-
-    const post = new Post({
-      ...req.body,
-      authorId: author._id,
-      author: author.name,
-      slug: title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, ''),
-    });
-
-    await post.save();
-
-    res.status(201).json({
-      message: 'Post created successfully',
-      post,
-    });
-  } catch (error: any) {
-    console.error('Create post error:', error);
-    res.status(500).json({ error: 'Failed to create post' });
   }
 }
 

@@ -3,7 +3,6 @@
 import { useCallback } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
-import TiptapLinkExtension from '@tiptap/extension-link';
 import TiptapImageExtension from '@tiptap/extension-image';
 import { Bold, Italic, List, ListOrdered, Link, Image as ImageIcon, Pilcrow, Heading1, Heading2 } from 'lucide-react';
 
@@ -17,10 +16,6 @@ const TiptapEditor: React.FC<TiptapEditorProps> = ({ initialContent, onContentCh
     immediatelyRender: false,
     extensions: [
       StarterKit,
-      TiptapLinkExtension.configure({
-        openOnClick: false,
-        autolink: true,
-      }),
       TiptapImageExtension.configure({
         inline: true,
         allowBase64: true,
