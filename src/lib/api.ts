@@ -21,16 +21,7 @@ const api = axios.create({
   timeout: 12000,
 });
 
-// Add auth token to requests if available
-api.interceptors.request.use((config) => {
-  if (typeof window !== 'undefined') {
-    const token = localStorage.getItem('authToken');
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-  }
-  return config;
-});
+// Auth token is handled via HTTP-only cookies, no need to add to headers
 
 // Handle auth errors
 api.interceptors.response.use(

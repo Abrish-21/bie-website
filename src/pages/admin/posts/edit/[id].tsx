@@ -120,10 +120,9 @@ export default function EditPost() {
 
   // Effect to load user data from localStorage
   useEffect(() => {
-    const token = localStorage.getItem('authToken');
     const userData = localStorage.getItem('user');
     
-    if (!token || !userData) {
+    if (!userData) {
       router.push('/admin/login');
       return;
     }
@@ -241,10 +240,6 @@ export default function EditPost() {
 
       const response = await fetch('/api/upload-image', {
         method: 'POST',
-        headers: {
-          // 'Content-Type': 'multipart/form-data', // Fetch handles this automatically for FormData
-          Authorization: `Bearer ${localStorage.getItem('authToken')}`
-        },
         body: formData, // Send FormData directly
       });
 

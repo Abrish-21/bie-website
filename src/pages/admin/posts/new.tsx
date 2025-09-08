@@ -100,10 +100,9 @@ export default function NewPost() {
   const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);
 
   useEffect(() => {
-    const token = localStorage.getItem('authToken');
     const userData = localStorage.getItem('user');
     
-    if (!token || !userData) {
+    if (!userData) {
       router.push('/admin/login');
       return;
     }
@@ -186,9 +185,6 @@ export default function NewPost() {
 
       const response = await fetch('/api/upload-image', {
         method: 'POST',
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem('authToken')}`
-        },
         body: formData,
       });
 
