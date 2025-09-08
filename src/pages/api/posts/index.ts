@@ -1,14 +1,15 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import dbConnect from '../../../lib/dbConnect';
 import Post from '../../../models/Post';
-import { verify } from 'jsonwebtoken';
-import { JwtPayload } from 'jsonwebtoken';
+import { jwtVerify, JWTPayload } from 'jose';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
+const JWT_SECRET = new TextEncoder().encode(
+  process.env.JWT_SECRET || 'your-super-secret-jwt-key-change-this-in-production'
+);
 
 // Auth middleware for protected routes
 interface AuthRequest extends NextApiRequest {
-  user?: JwtPayload;
+  user?: JWTPayload & { name?: string; userId?: string };
 }
 
 type AuthHandler = (req: AuthRequest, res: NextApiResponse) => Promise<void>;
@@ -21,10 +22,13 @@ const auth = (handler: AuthHandler) => async (req: AuthRequest, res: NextApiResp
   }
 
   try {
-    const decoded = verify(authToken, JWT_SECRET) as JwtPayload;
-    req.user = decoded; // Attach user info to the request
+    const { payload } = await jwtVerify(authToken, JWT_SECRET, {
+        algorithms: ['HS256']
+    });
+    req.user = payload; // Attach user info to the request
     return handler(req, res);
   } catch (error) {
+    console.error("Token verification failed:", error);
     return res.status(401).json({ error: 'Unauthorized: Invalid token.' });
   }
 };
@@ -42,14 +46,20 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
           if (!req.user) {
             return res.status(401).json({ success: false, error: 'Unauthorized: User information missing.' });
           }
-          const post = await Post.create({ ...req.body, author: req.user.userId });
-          res.status(201).json({ success: true, data: post });
-        } catch (error) {
-          if (error instanceof Error) {
-            res.status(400).json({ success: false, error: error.message });
-          } else {
-            res.status(400).json({ success: false, error: 'An unknown error occurred.' });
+          // FIX: Provide both authorId and the author's name to satisfy the schema
+          const postData = {
+            ...req.body,
+            authorId: req.user.userId,
+            author: req.user.name, 
+          };
+          res.status(201).json({ success: true, data: Post });
+        } catch (error: any) {
+          console.error("Error creating post in API:", JSON.stringify(error, null, 2));
+          // Mongoose validation errors are often the cause of 400s
+          if (error.name === 'ValidationError') {
+              return res.status(400).json({ success: false, error: 'Validation Error', details: error.errors });
           }
+          res.status(400).json({ success: false, error: error.message || 'An unknown error occurred.' });
         }
       })(req, res);
 

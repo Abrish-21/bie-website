@@ -6,7 +6,6 @@ import { ArrowLeft, Save, Eye, UploadCloud, Bold, Italic, List, ListOrdered, Lin
 import dynamic from 'next/dynamic';
 import { postsAPI } from '../../../lib/api';
 import { CustomAlertModal as ImportedCustomAlertModal, ConfirmationModal } from '../../../components/ui/Alerts';
-// import { POST_TYPES, CATEGORIES } from '../../../data/constants';
 
 // --- TipTap Imports ---
 import { useEditor, EditorContent } from '@tiptap/react';
@@ -15,8 +14,7 @@ import TiptapLinkExtension from '@tiptap/extension-link';
 import TiptapImageExtension from '@tiptap/extension-image';
 // --- End TipTap Imports ---
 
-// Custom Modal for alerts (replace alert() calls)
-// ⭐ FIX: Added an explicit interface to define the types for the component's props to resolve the TypeScript error. ⭐
+// Custom Modal for alerts
 interface CustomAlertModalProps {
   message: string;
   onClose: () => void;
@@ -46,7 +44,7 @@ interface PostFormData {
   content: string;
   imageUrl: string;
   category: string;
-  type: 'featured' | 'market-watch' | 'opinion' | 'latest' | string;
+  type: string;
   tags: string[];
   isDraft: boolean;
   readTime: number | string;
@@ -63,11 +61,11 @@ const CATEGORIES = [
   'Services', 'Finance', 'Real Estate', 'Tourism', 'Education', 'Healthcare'
 ];
 
+// FIX 1: Correct the POST_TYPES values to match the database schema
 const POST_TYPES = [
-  { value: 'featured', label: 'Featured Article' },
-  { value: 'market-watch', label: 'Market Watch' },
-  { value: 'opinion', label: 'Opinion Piece' },
-  { value: 'latest', label: 'Latest News' }
+  { value: 'featuredArticle', label: 'Featured Article' },
+  { value: 'marketUpdate', label: 'Market Watch' },
+  { value: 'opinionPiece', label: 'Opinion Piece' },
 ];
 
 // TipTap Editor component with toolbar
@@ -84,7 +82,7 @@ export default function NewPost() {
     content: '',
     imageUrl: '',
     category: 'Business',
-    type: 'latest',
+    type: 'featuredArticle', // Default to a valid type
     tags: [],
     isDraft: false,
     readTime: '',
@@ -194,7 +192,8 @@ export default function NewPost() {
       }
 
       const data = await response.json();
-      return data.imageUrl;
+      // FIX 3: Use `data.location` which is what the upload API actually returns
+      return data.location;
     } catch (uploadError: any) {
       console.error('[FRONTEND_ERROR] Error during image upload:', uploadError);
       throw new Error(uploadError.message || 'Failed to upload image.');
@@ -214,7 +213,6 @@ export default function NewPost() {
         return;
     }
     
-    // Validate if an image file is selected OR an image URL is provided
     if (!selectedImageFile && !formData.imageUrl) {
         setAlertMessage('Please either select an image file or provide an Image URL.');
         setLoading(false);
@@ -224,10 +222,8 @@ export default function NewPost() {
     let finalImageUrl = formData.imageUrl;
     try {
       if (selectedImageFile) {
-        // ⭐ NEW DEBUG LOG: Check selectedImageFile right before calling uploadImage ⭐
         console.log('[FRONTEND_DEBUG] selectedImageFile before uploadImage call:', selectedImageFile);
-        if (!selectedImageFile) { // Extra check for robustness
-          console.error('[FRONTEND_ERROR] selectedImageFile is null or undefined immediately before upload. This should not happen if validation passed.');
+        if (!selectedImageFile) {
           throw new Error('Selected image file is unexpectedly null before upload.');
         }
         finalImageUrl = await uploadImage(selectedImageFile);
@@ -243,7 +239,8 @@ export default function NewPost() {
         slug: formData.title.toLowerCase()
           .replace(/[^a-z0-9]+/g, '-')
           .replace(/(^-|-$)/g, ''),
-        readTime: Number(formData.readTime),
+        // FIX 2: Keep readTime as a string to match the database schema
+        readTime: String(formData.readTime),
       };
 
       await postsAPI.create(postData);

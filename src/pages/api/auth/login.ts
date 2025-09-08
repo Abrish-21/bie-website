@@ -1,5 +1,3 @@
-// src/pages/api/auth/login.ts
-
 import { NextApiRequest, NextApiResponse } from 'next';
 import { SignJWT } from 'jose';
 import bcrypt from 'bcryptjs';
@@ -42,13 +40,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(401).json({ error: 'Invalid credentials' });
     }
     
-    // Ensure _id and role exist and are in correct format for JWT
-    if (!user._id || typeof user.role !== 'string') {
-        console.error('User _id or role is missing/invalid:', user);
+    // Ensure _id, role, and name exist and are in correct format for JWT
+    if (!user._id || typeof user.role !== 'string' || typeof user.name !== 'string') {
+        console.error('User _id, role, or name is missing/invalid:', user);
         return res.status(500).json({ error: 'Internal server error: User data incomplete' });
     }
 
-    const token = await new SignJWT({ userId: user._id.toString(), role: user.role })
+    const token = await new SignJWT({ 
+        userId: user._id.toString(), 
+        role: user.role,
+        name: user.name // Add user's name to the token payload
+    })
       .setProtectedHeader({ alg: 'HS256' })
       .setIssuedAt()
       .setExpirationTime('7d')
@@ -59,7 +61,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const { password: _, ...userWithoutPassword } = user;
     res.status(200).json({ message: 'Login successful', user: userWithoutPassword });
-  } catch (error: any) {
+  }
+  catch (error: any) {
     console.error('Login error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
