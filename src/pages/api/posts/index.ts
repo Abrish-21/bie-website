@@ -23,7 +23,7 @@ const auth = (handler: AuthHandler) => async (req: AuthRequest, res: NextApiResp
 
   try {
     const { payload } = await jwtVerify(authToken, JWT_SECRET, {
-        algorithms: ['HS256']
+      algorithms: ['HS256']
     });
     req.user = payload; // Attach user info to the request
     return handler(req, res);
@@ -34,13 +34,16 @@ const auth = (handler: AuthHandler) => async (req: AuthRequest, res: NextApiResp
 };
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
+  // Connect to the database first
   await dbConnect();
 
   switch (req.method) {
     case 'GET':
+      // Public GET route - no auth middleware needed
       return handleGetPosts(req, res);
+      
     case 'POST':
-      // We need to wrap the post logic in the auth middleware
+      // Auth middleware for POST route
       return auth(async (req, res) => {
         try {
           if (!req.user) {
@@ -82,6 +85,7 @@ async function handleGetPosts(req: NextApiRequest, res: NextApiResponse) {
     if (type) query.type = type;
     if (category) query.category = category;
 
+    // Use a try/catch block inside Promise.all to isolate and log specific errors
     const [posts, total] = await Promise.all([
       Post.find(query)
         .sort({ publishDate: -1 })
@@ -93,17 +97,21 @@ async function handleGetPosts(req: NextApiRequest, res: NextApiResponse) {
     ]);
 
     res.status(200).json({
-      posts: posts.map(p => ({ 
-        ...p, 
+      posts: posts.map(p => ({
+        ...p,
         // Gracefully handle cases where authorId is not populated
-        author: (p.authorId as any)?.name || 'Unknown' 
+        author: (p.authorId as any)?.name || 'Unknown'
       })),
       total,
       hasMore: skipNum + posts.length < total,
     });
   } catch (error: any) {
     console.error('Failed to fetch posts', error);
-    res.status(500).json({ error: 'Failed to fetch posts' });
+    // Provide a more detailed error message in the response for better debugging
+    res.status(500).json({
+      error: 'Failed to fetch posts',
+      details: error.message || 'An unknown error occurred.'
+    });
   }
 }
 
