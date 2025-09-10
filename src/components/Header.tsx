@@ -1,4 +1,4 @@
-import { Search, Menu, User } from 'lucide-react';
+import { Search, Menu, User, Linkedin, Send } from 'lucide-react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 
@@ -16,31 +16,35 @@ export function Header() {
                 alt="Business Info Ethiopia Logo"
                 width="100"
                 height="50"
-                
               />
             </a>
           </div>
 
           {/* Navigation */}
           <nav className="hidden lg:flex space-x-6">
-            <a href="/business-pulse" className="text-white hover:text-red-600 px-3 py-2 text-sm font-medium transition-colors">
+            <a href="/coming-soon" className="text-white hover:text-red-600 px-3 py-2 text-sm font-medium transition-colors">
               Business Pulse
             </a>
-            <a href="/insight-center" className="text-white hover:text-red-600 px-3 py-2 text-sm font-medium transition-colors">
+            <a href="/coming-soon" className="text-white hover:text-red-600 px-3 py-2 text-sm font-medium transition-colors">
               Insight Center
             </a>
-            <a href="/opportunities" className="text-white hover:text-red-600 px-3 py-2 text-sm font-medium transition-colors">
+            <a href="/coming-soon" className="text-white hover:text-red-600 px-3 py-2 text-sm font-medium transition-colors">
               Opportunity Hub
             </a>
-            <a href="/economy-explained" className="text-white hover:text-red-600 px-3 py-2 text-sm font-medium transition-colors">
+            <a href="/coming-soon" className="text-white hover:text-red-600 px-3 py-2 text-sm font-medium transition-colors">
               Economy Explained
             </a>
           </nav>
 
-          {/* Search and Actions */}
-          <button className='px-6 py-2 bg-red-800 rounded-md text-white'>
-            Subscribe
-          </button>
+          {/* Social Icons */}
+          <div className="flex items-center space-x-4">
+            <a href="https://www.linkedin.com/company/businessinfoeth/" target="_blank" rel="noopener noreferrer" className="text-white hover:text-blue-500 transition-colors">
+              <Linkedin className="h-6 w-6" />
+            </a>
+            <a href="https://t.me/Businessinfoeth" target="_blank" rel="noopener noreferrer" className="text-white hover:text-cyan-400 transition-colors">
+              <Send className="h-6 w-6" />
+            </a>
+          </div>
         </div>
       </div>
     </header>

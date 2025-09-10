@@ -3,12 +3,16 @@ import { useRouter } from 'next/router';
 import { Edit, Trash2, Plus, Users, LogOut, Eye } from 'lucide-react';
 import { postsAPI, usersAPI } from '../../lib/api';
 
+// FIX: Update the Post interface to match the new API response
 interface Post {
   _id: string;
   title: string;
   excerpt: string;
-  author: string;
-  authorId: string;
+  author: {
+    _id: string;
+    name: string;
+    profilePictureUrl?: string;
+  };
   category: string;
   type: string;
   createdAt: string;
@@ -33,6 +37,9 @@ export default function AdminDashboard() {
   const [activeTab, setActiveTab] = useState<'posts' | 'users'>('posts');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
   const [showUserDeleteConfirm, setShowUserDeleteConfirm] = useState<string | null>(null);
+  // FIX: State for the error modal
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
 
   useEffect(() => {
     const userData = localStorage.getItem('user');
@@ -74,6 +81,8 @@ export default function AdminDashboard() {
       console.error('Error loading data:', error);
       setPosts([]);
       setUsers([]);
+      // FIX: Display a generic error message
+      setErrorMessage('Failed to load data. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -97,7 +106,8 @@ export default function AdminDashboard() {
       setShowDeleteConfirm(null);
     } catch (error) {
       console.error('Error deleting post:', error);
-      alert('Failed to delete post');
+      // FIX: Use the error modal instead of alert()
+      setErrorMessage('Failed to delete post.');
     }
   };
 
@@ -108,16 +118,19 @@ export default function AdminDashboard() {
       setShowUserDeleteConfirm(null);
     } catch (error) {
       console.error('Error deleting user:', error);
-      alert('Failed to delete user');
+      // FIX: Use the error modal instead of alert()
+      setErrorMessage('Failed to delete user.');
     }
   };
 
   const canEditPost = (post: Post) => {
-    return user?.role === 'superadmin' || post.authorId === user?._id;
+    // FIX: Use post.author._id instead of post.authorId
+    return user?.role === 'superadmin' || post.author._id === user?._id;
   };
 
   const canDeletePost = (post: Post) => {
-    return user?.role === 'superadmin' || post.authorId === user?._id;
+    // FIX: Use post.author._id instead of post.authorId
+    return user?.role === 'superadmin' || post.author._id === user?._id;
   };
 
   const canDeleteUser = (targetUser: User) => {
@@ -266,7 +279,8 @@ export default function AdminDashboard() {
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {post.author}
+                        {/* FIX: Render the author's name instead of the whole object */}
+                        {post.author.name}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">
@@ -433,6 +447,28 @@ export default function AdminDashboard() {
                   className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors"
                 >
                   Delete
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* FIX: Error Modal */}
+      {errorMessage && (
+        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+          <div className="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+            <div className="mt-3 text-center">
+              <h3 className="text-lg font-medium text-gray-900 mb-4">Error</h3>
+              <p className="text-sm text-red-500 mb-6">
+                {errorMessage}
+              </p>
+              <div className="flex justify-center space-x-4">
+                <button
+                  onClick={() => setErrorMessage(null)}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+                >
+                  Dismiss
                 </button>
               </div>
             </div>

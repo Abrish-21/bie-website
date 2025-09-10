@@ -1,6 +1,12 @@
-// src/lib/data.ts
-
 import { postsAPI } from './api';
+
+// New: Define the Author interface for type safety
+export interface Author {
+  _id: string;
+  name: string;
+  email: string;
+  profilePictureUrl?: string;
+}
 
 export interface Post {
   _id: string;
@@ -11,8 +17,9 @@ export interface Post {
   imageUrl: string;
   category: string;
   readTime: number | string;
-  author: string;
-  authorId?: string;
+  // Fix: The author is now an object, not a string
+  author: Author;
+  authorTitle?: string;
   tags?: string[];
   type: 'featuredArticle' | 'marketUpdate' | 'opinionPiece' | string;
   views?: number;
@@ -133,7 +140,8 @@ export const searchPosts = async (query: string): Promise<Post[]> => {
       post.title.toLowerCase().includes(searchTerm) ||
       post.excerpt.toLowerCase().includes(searchTerm) ||
       (post.fullContent || post.content || '').toLowerCase().includes(searchTerm) ||
-      post.author.toLowerCase().includes(searchTerm) ||
+      // Fix: Now correctly checks the name property of the author object
+      post.author.name.toLowerCase().includes(searchTerm) ||
       post.category.toLowerCase().includes(searchTerm) ||
       (post.tags && post.tags.some(tag => tag.toLowerCase().includes(searchTerm)))
     );

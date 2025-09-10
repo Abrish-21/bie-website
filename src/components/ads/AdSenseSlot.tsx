@@ -22,7 +22,7 @@ export function AdSenseSlot({ slotId, layout = 'display', className, label }: Ad
   if (!client) {
     return (
       <div className={className}>
-        <div className="w-full h-24 bg-gray-100 border border-dashed border-gray-300 rounded flex items-center justify-center text-gray-500 text-sm">
+        <div className="w-full h-24 bg-gray-100 border border-dashed border-gray-300 flex items-center justify-center text-gray-500 text-sm">
           {label ? `Ad (Google) • ${label}` : 'Ad (Google)'}
         </div>
       </div>

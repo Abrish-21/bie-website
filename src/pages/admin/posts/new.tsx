@@ -1,8 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/router';
-import { ArrowLeft, Save, Eye, UploadCloud, Bold, Italic, List, ListOrdered, Link, Image, Pilcrow, Heading1, Heading2 } from 'lucide-react';
+import { ArrowLeft, Save, Eye, UploadCloud } from 'lucide-react';
 import dynamic from 'next/dynamic';
-import { postsAPI } from '../../../lib/api';
+import { postsAPI} from '../../../lib/api';
 import { CustomAlertModal as ImportedCustomAlertModal, ConfirmationModal } from '../../../components/ui/Alerts';
 
 // --- TipTap Imports ---
@@ -10,6 +10,7 @@ import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import TiptapLinkExtension from '@tiptap/extension-link';
 import TiptapImageExtension from '@tiptap/extension-image';
+import api from '@/lib/api';
 // --- End TipTap Imports ---
 
 // Custom Modal for alerts
@@ -42,9 +43,8 @@ interface PostFormData {
   content: string;
   imageUrl: string;
   category: string;
-  type: string;
   tags: string[];
-  isDraft: boolean; // ⭐ FIXED: Added isDraft to the interface
+  isDraft: boolean;
   readTime: number | string;
   author: string;
   authorId: string;
@@ -55,15 +55,18 @@ interface PostFormData {
 }
 
 const CATEGORIES = [
-  'Business', 'Economy', 'Technology', 'Politics', 'Agriculture', 'Manufacturing',
-  'Services', 'Finance', 'Real Estate', 'Tourism', 'Education', 'Healthcare'
-];
-
-// FIX 1: Correct the POST_TYPES values to match the database schema
-const POST_TYPES = [
-  { value: 'featuredArticle', label: 'Featured Article' },
-  { value: 'marketUpdate', label: 'Market Watch' },
-  { value: 'opinionPiece', label: 'Opinion Piece' },
+  'Agriculture & Agribusiness',
+  'Banking & Financial Services',
+  'Energy & Mining',
+  'Manufacturing & Industry',
+  'Construction & Real Estate',
+  'Technology & Telecommunications',
+  'Trade & Retail',
+  'Transport & Logistics',
+  'Tourism & Hospitality',
+  'Healthcare & Pharmaceuticals',
+  'Education & Training',
+  'Public Sector & Policy',
 ];
 
 // TipTap Editor component with toolbar
@@ -79,10 +82,9 @@ export default function NewPost() {
     excerpt: '',
     content: '',
     imageUrl: '',
-    category: 'Business',
-    type: 'featuredArticle', // Default to a valid type
+    category: 'Agriculture & Agribusiness',
     tags: [],
-    isDraft: true, // ⭐ FIXED: Set default to true to match form state
+    isDraft: true,
     readTime: '',
     author: '',
     authorId: '',
@@ -118,15 +120,11 @@ export default function NewPost() {
   }, [router]);
 
   const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
-    const { name, value, type } = e.target;
-    // ⭐ FIXED: Correctly handle boolean values for radio buttons
-    const newValue = type === 'radio'
-      ? (e.target as HTMLInputElement).checked
-      : value;
-
+    const { name, value } = e.target;
+    
     setFormData((prev) => ({
       ...prev,
-      [name]: newValue,
+      [name]: value,
     }));
   }, []);
 
@@ -143,7 +141,7 @@ export default function NewPost() {
       const file = e.target.files[0];
       setSelectedImageFile(file);
       setImagePreviewUrl(URL.createObjectURL(file));
-      setFormData(prev => ({ ...prev, imageUrl: '' })); // Clear direct URL if file selected
+      setFormData(prev => ({ ...prev, imageUrl: '' }));
     } else {
       setSelectedImageFile(null);
       setImagePreviewUrl(null);
@@ -167,34 +165,28 @@ export default function NewPost() {
     }));
   }, []);
 
+  // FIX: Refactored to use the axios instance for proper auth token handling
   const uploadImage = async (file: File): Promise<string> => {
     setUploadingImage(true);
     try {
-      console.log('[FRONTEND_DEBUG] File being sent to API:', file);
-
       if (!file) {
-        console.error('[FRONTEND_ERROR] uploadImage received a null or undefined file.');
         throw new Error('No valid file provided for upload.');
       }
-
+      
       const formData = new FormData();
       formData.append('image', file);
 
-      const response = await fetch('/api/upload-image', {
-        method: 'POST',
-        body: formData,
+      // Use the 'api' instance which is configured to send cookies
+      const response = await api.post('/upload-image', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
       });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Image upload failed');
-      }
-
-      const data = await response.json();
-      // FIX 3: Use `data.location` which is what the upload API actually returns
-      return data.location;
+      // The backend now returns a 'imageUrl' field, not 'location'
+      return response.data.imageUrl;
     } catch (uploadError: any) {
-      console.error('[FRONTEND_ERROR] Error during image upload:', uploadError);
+      console.error('Error during image upload:', uploadError);
       throw new Error(uploadError.message || 'Failed to upload image.');
     } finally {
       setUploadingImage(false);
@@ -206,44 +198,36 @@ export default function NewPost() {
     setLoading(true);
     setAlertMessage(null);
 
-    if (!formData.title || !formData.content || !formData.category || !formData.type || !formData.readTime) {
-        setAlertMessage('Please fill in all required fields: Title, Content, Category, Type, and Read Time.');
+    if (!formData.title || !formData.content || !formData.category || !formData.readTime) {
+        setAlertMessage('Please fill in all required fields: Title, Content, Category, and Read Time.');
         setLoading(false);
         return;
     }
     
-    if (!selectedImageFile && !formData.imageUrl) {
-        setAlertMessage('Please either select an image file or provide an Image URL.');
-        setLoading(false);
-        return;
-    }
-
     let finalImageUrl = formData.imageUrl;
     try {
       if (selectedImageFile) {
-        console.log('[FRONTEND_DEBUG] selectedImageFile before uploadImage call:', selectedImageFile);
         if (!selectedImageFile) {
           throw new Error('Selected image file is unexpectedly null before upload.');
         }
         finalImageUrl = await uploadImage(selectedImageFile);
       } else if (!finalImageUrl) { 
-        throw new Error('No image provided, even after checking for selected file or URL.');
+        setAlertMessage('Please either select an image file or provide an Image URL.');
+        setLoading(false);
+        return;
       }
-
-      // ⭐ START OF UPDATED CODE BLOCK ⭐
+      
       const postData = {
         ...formData,
         imageUrl: finalImageUrl,
-        // Ensure author and authorId are correctly passed
         author: user?.name || (user?.role === 'superadmin' ? 'Super Admin' : 'Content Admin'),
         authorId: user?._id,
         slug: formData.title.toLowerCase()
           .replace(/[^a-z0-9]+/g, '-')
           .replace(/(^-|-$)/g, ''),
         readTime: Number(formData.readTime),
-        isDraft: formData.isDraft, // ⭐ FIXED: Ensure isDraft is correctly passed as a boolean
+        isDraft: formData.isDraft,
       };
-      // ⭐ END OF UPDATED CODE BLOCK ⭐
 
       await postsAPI.create(postData);
       router.push('/admin/dashboard');
@@ -252,7 +236,6 @@ export default function NewPost() {
       setAlertMessage(error.message || 'Failed to create post');
     } finally {
       setLoading(false);
-      setUploadingImage(false);
     }
   };
 
@@ -334,7 +317,6 @@ export default function NewPost() {
             )}
             <div className="flex items-center space-x-4 mb-6 text-sm text-gray-500">
               <span>Category: {formData.category}</span>
-              <span>Type: {POST_TYPES.find(t => t.value === formData.type)?.label}</span>
               <span>Status: {formData.isDraft ? 'Draft' : 'Published'}</span>
               <span>Read Time: {formData.readTime || 'N/A'} min</span>
             </div>
@@ -390,23 +372,6 @@ export default function NewPost() {
                       ))}
                     </select>
                   </div>
-
-                  <div>
-                    <label htmlFor="type" className="block text-sm font-medium text-gray-700 mb-2">
-                    Post Type *
-                    </label>
-                  <select
-                    required
-                    name="type"
-                    value={formData.type}
-                    onChange={handleInputChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-800"
-                  >
-                    {POST_TYPES.map(type => (
-                      <option key={type.value} value={type.value}>{type.label}</option>
-                    ))}
-                  </select>
-                </div>
 
                 <div>
                   <label htmlFor="readTime" className="block text-sm font-medium text-gray-700 mb-2">

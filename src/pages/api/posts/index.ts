@@ -87,8 +87,6 @@ async function handleGetPosts(req: NextApiRequest, res: NextApiResponse) {
     if (category) query.category = category;
 
     // Explicitly reference the User model to ensure its schema is registered
-    // before the populate call on the Post model.
-    // This is a common workaround for Mongoose/Next.js module loading issues.
     User;
     
     // Use a try/catch block inside Promise.all to isolate and log specific errors
@@ -97,7 +95,7 @@ async function handleGetPosts(req: NextApiRequest, res: NextApiResponse) {
         .sort({ publishDate: -1 })
         .limit(limitNum)
         .skip(skipNum)
-        .populate('authorId', 'name')
+        .populate('authorId', 'name profilePictureUrl') // FIX: Now includes profilePictureUrl
         .lean(),
       Post.countDocuments(query)
     ]);
@@ -105,8 +103,12 @@ async function handleGetPosts(req: NextApiRequest, res: NextApiResponse) {
     res.status(200).json({
       posts: posts.map(p => ({
         ...p,
-        // Gracefully handle cases where authorId is not populated
-        author: (p.authorId as any)?.name || 'Unknown'
+        // FIX: Reconstruct the author object to match the frontend type
+        author: {
+          _id: (p.authorId as any)?._id,
+          name: (p.authorId as any)?.name || 'Unknown',
+          profilePictureUrl: (p.authorId as any)?.profilePictureUrl
+        }
       })),
       total,
       hasMore: skipNum + posts.length < total,
