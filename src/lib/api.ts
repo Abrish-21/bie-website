@@ -49,6 +49,16 @@ api.interceptors.response.use(
   }
 );
 
+// Define a new interface for registration data
+interface RegisterData {
+  name: string;
+  username: string;
+  email: string;
+  password: string;
+  role?: string;
+  profilePictureUrl?: string | null;
+}
+
 // Auth API functions
 export const authAPI = {
   login: async (email: string, password: string) => {
@@ -56,7 +66,8 @@ export const authAPI = {
     return response.data;
   },
   
-  register: async (userData: { name: string; username: string; email: string; password: string; role?: string }) => {
+  // FIX: Updated the type definition for userData
+  register: async (userData: RegisterData) => {
     const response = await api.post('/auth/register', userData);
     return response.data;
   }

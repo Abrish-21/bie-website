@@ -8,6 +8,7 @@ export interface IUser extends Document {
   password: string;
   role: 'admin' | 'superadmin' | 'content-admin';
   status: 'active' | 'pending';
+  profilePictureUrl?: string; // Add the new field to the interface
   createdAt: Date;
   updatedAt: Date;
   comparePassword(candidatePassword: string): Promise<boolean>;
@@ -50,6 +51,11 @@ const userSchema = new Schema<IUser>({
     enum: ['active', 'pending'],
     default: 'pending',
     required: true
+  },
+  profilePictureUrl: {
+    type: String,
+    trim: true,
+    default: null // Default to null, will be populated on registration
   }
 }, {
   timestamps: true
@@ -81,4 +87,3 @@ userSchema.methods.toJSON = function() {
 };
 
 export default mongoose.models.User || mongoose.model<IUser>('User', userSchema);
-

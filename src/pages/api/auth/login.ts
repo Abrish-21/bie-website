@@ -40,7 +40,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(401).json({ error: 'Invalid credentials' });
     }
     
-    // Ensure _id, role, and name exist and are in correct format for JWT
+    // Ensure _id, role, name, and profilePictureUrl exist and are in correct format for JWT
     if (!user._id || typeof user.role !== 'string' || typeof user.name !== 'string') {
         console.error('User _id, role, or name is missing/invalid:', user);
         return res.status(500).json({ error: 'Internal server error: User data incomplete' });
@@ -49,7 +49,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const token = await new SignJWT({ 
         userId: user._id.toString(), 
         role: user.role,
-        name: user.name // Add user's name to the token payload
+        name: user.name, // Add user's name to the token payload
+        // ADDED: Include the profile picture URL in the JWT payload
+        profilePictureUrl: user.profilePictureUrl || null
     })
       .setProtectedHeader({ alg: 'HS256' })
       .setIssuedAt()

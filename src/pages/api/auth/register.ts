@@ -14,7 +14,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     await dbConnect();
 
     // Destructure user data from the request body. 'role' is removed.
-    const { username, name, email, password } = req.body;
+    // ADDED: profilePictureUrl to the destructuring
+    const { username, name, email, password, profilePictureUrl } = req.body;
 
     // Validate that all required fields are present
     if (!username || !name || !email || !password) {
@@ -39,6 +40,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       password: password, // Raw password - will be hashed by pre-save hook
       role: 'admin', // Role is hardcoded to 'admin' for public registration
       status: 'pending',     // New users must be verified by a super-admin
+      profilePictureUrl: profilePictureUrl || null // ADDED: Save the profile picture URL
     });
 
     // Save the new user to the database

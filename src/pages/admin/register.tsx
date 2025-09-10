@@ -1,16 +1,44 @@
 import React, { useState } from 'react';
 import { useRouter } from 'next/router';
 import { authAPI } from '../../lib/api';
+import axios from 'axios';
 
 const AdminRegister = () => {
   const [name, setName] = useState('');
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [profilePictureUrl, setProfilePictureUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [imageUploading, setImageUploading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const router = useRouter();
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setImageUploading(true);
+    setError('');
+
+    try {
+      const formData = new FormData();
+      formData.append('image', file);
+
+      const response = await axios.post('/api/upload-user-image', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+
+      setProfilePictureUrl(response.data.imageUrl);
+      setImageUploading(false);
+    } catch (err: any) {
+      setError(err.response?.data?.error || err.message || 'Image upload failed.');
+      setImageUploading(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -19,7 +47,13 @@ const AdminRegister = () => {
     setSuccess('');
 
     try {
-      const response = await authAPI.register({ name, username, email, password });
+      const response = await authAPI.register({
+        name,
+        username,
+        email,
+        password,
+        profilePictureUrl, // Include the profile picture URL
+      });
       setSuccess(response.message || 'Registration successful! Your account is pending approval.');
       setLoading(false);
       // Clear form fields on success
@@ -27,6 +61,7 @@ const AdminRegister = () => {
       setUsername('');
       setEmail('');
       setPassword('');
+      setProfilePictureUrl(null);
     } catch (err: any) {
       setError(err.response?.data?.error || err.message || 'Registration failed');
       setLoading(false);
@@ -129,9 +164,37 @@ const AdminRegister = () => {
             </div>
 
             <div>
+              <label htmlFor="profilePicture" className="block text-sm font-medium text-gray-700">
+                Profile Picture
+              </label>
+              <div className="mt-1">
+                <input
+                  id="profilePicture"
+                  name="profilePicture"
+                  type="file"
+                  accept="image/*"
+                  onChange={handleImageUpload}
+                  disabled={imageUploading}
+                  className="sr-only" // Hide the default input
+                />
+                <label
+                  htmlFor="profilePicture"
+                  className="cursor-pointer w-full flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                >
+                  {imageUploading ? 'Uploading...' : 'Choose File'}
+                </label>
+              </div>
+              {profilePictureUrl && (
+                <div className="mt-4 flex items-center justify-center">
+                  <img src={profilePictureUrl} alt="Profile Preview" className="h-20 w-20 rounded-full object-cover" />
+                </div>
+              )}
+            </div>
+
+            <div>
               <button
                 type="submit"
-                disabled={loading}
+                disabled={loading || imageUploading}
                 className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
               >
                 {loading ? 'Registering...' : 'Register'}

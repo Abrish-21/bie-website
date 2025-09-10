@@ -21,6 +21,7 @@ interface User {
   email: string;
   role: 'admin' | 'superadmin';
   createdAt: string;
+  profilePictureUrl?: string; // Add this field to the User interface
 }
 
 export default function AdminDashboard() {
@@ -28,7 +29,7 @@ export default function AdminDashboard() {
   const [posts, setPosts] = useState<Post[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<User | null>(null);
   const [activeTab, setActiveTab] = useState<'posts' | 'users'>('posts');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
   const [showUserDeleteConfirm, setShowUserDeleteConfirm] = useState<string | null>(null);
@@ -38,7 +39,7 @@ export default function AdminDashboard() {
     
     if (userData) {
       try {
-        const parsedUser = JSON.parse(userData);
+        const parsedUser: User = JSON.parse(userData);
         setUser(parsedUser);
       } catch (error) {
         console.error('Error parsing user data:', error);
@@ -162,7 +163,19 @@ export default function AdminDashboard() {
                 Welcome back, {user?.name} ({user?.role})
               </p>
             </div>
+            {/* ADDED: Profile picture and actions */}
             <div className="flex items-center space-x-4">
+              {user.profilePictureUrl ? (
+                <img 
+                  src={user.profilePictureUrl} 
+                  alt="Profile" 
+                  className="h-10 w-10 rounded-full object-cover border border-gray-200"
+                />
+              ) : (
+                <div className="h-10 w-10 rounded-full bg-gray-300 flex items-center justify-center text-sm font-medium text-white">
+                  {user.name?.[0]?.toUpperCase() || '?'}
+                </div>
+              )}
               <button
                 onClick={() => router.push('/admin/posts/new')}
                 className="flex items-center space-x-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"

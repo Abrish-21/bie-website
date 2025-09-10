@@ -86,6 +86,11 @@ async function handleGetPosts(req: NextApiRequest, res: NextApiResponse) {
     if (type) query.type = type;
     if (category) query.category = category;
 
+    // Explicitly reference the User model to ensure its schema is registered
+    // before the populate call on the Post model.
+    // This is a common workaround for Mongoose/Next.js module loading issues.
+    User;
+    
     // Use a try/catch block inside Promise.all to isolate and log specific errors
     const [posts, total] = await Promise.all([
       Post.find(query)
