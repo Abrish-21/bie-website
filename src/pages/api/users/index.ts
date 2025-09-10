@@ -4,14 +4,19 @@ import User from '../../../models/User';
 import { superAdminMiddleware, AuthenticatedRequest } from '../../../lib/auth';
 
 async function handler(req: AuthenticatedRequest, res: NextApiResponse) {
-  await dbConnect();
+  try {
+    await dbConnect();
 
-  switch (req.method) {
-    case 'GET':
-      return handleGetUsers(req, res);
-    default:
-      res.setHeader('Allow', ['GET']);
-      return res.status(405).json({ error: 'Method not allowed' });
+    switch (req.method) {
+      case 'GET':
+        return handleGetUsers(req, res);
+      default:
+        res.setHeader('Allow', ['GET']);
+        return res.status(405).json({ error: 'Method not allowed' });
+    }
+  } catch (error) {
+    console.error('Error in superAdminMiddleware:', error);
+    res.status(500).json({ error: 'Failed to authenticate superadmin.' });
   }
 }
 
@@ -29,4 +34,3 @@ async function handleGetUsers(req: AuthenticatedRequest, res: NextApiResponse) {
 }
 
 export default superAdminMiddleware(handler);
-

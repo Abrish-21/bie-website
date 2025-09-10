@@ -6,14 +6,15 @@ export interface IPost extends Document {
   content: string;
   imageUrl: string;
   category: string;
-  readTime: string;
+  readTime: number; 
   publishDate: Date;
   author: string;
   authorId: mongoose.Types.ObjectId;
   views: number;
   tags: string[];
-  type: 'featuredArticle' | 'marketUpdate' | 'opinionPiece';
+  type: 'featured' | 'market-watch' | 'opinion' | 'latest';
   slug: string;
+  isDraft: boolean; 
   // Additional fields for different post types
   marketImpact?: string;
   dataPoints?: { label: string; value: string }[];
@@ -22,6 +23,8 @@ export interface IPost extends Document {
   commentsCount?: number;
   createdAt: Date;
   updatedAt: Date;
+  seoTitle?: string;
+  seoDescription?: string;
 }
 
 const postSchema = new Schema<IPost>({
@@ -51,9 +54,9 @@ const postSchema = new Schema<IPost>({
     trim: true
   },
   readTime: {
-    type: String,
-    required: [true, 'Read time is required'],
-    trim: true
+    type: Number,
+    // Removed 'required: true' to handle older documents gracefully
+    default: 0
   },
   publishDate: {
     type: Date,
@@ -79,14 +82,29 @@ const postSchema = new Schema<IPost>({
   }],
   type: {
     type: String,
-    enum: ['featuredArticle', 'marketUpdate', 'opinionPiece'],
-    required: [true, 'Post type is required']
+    enum: ['featured', 'market-watch', 'opinion', 'latest'],
+    // Removed 'required: true' to handle older documents gracefully
+    default: 'latest'
   },
   slug: {
     type: String,
     required: [true, 'Slug is required'],
     unique: true,
     trim: true
+  },
+  isDraft: {
+    type: Boolean,
+    default: false
+  },
+  seoTitle: {
+    type: String,
+    trim: true,
+    maxlength: 150
+  },
+  seoDescription: {
+    type: String,
+    trim: true,
+    maxlength: 300
   },
   // Market Update specific fields
   marketImpact: {
@@ -140,4 +158,3 @@ postSchema.index({ type: 1 });
 postSchema.index({ publishDate: -1 });
 
 export default mongoose.models.Post || mongoose.model<IPost>('Post', postSchema);
-

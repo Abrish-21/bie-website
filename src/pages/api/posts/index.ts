@@ -46,20 +46,22 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
           if (!req.user) {
             return res.status(401).json({ success: false, error: 'Unauthorized: User information missing.' });
           }
-          // FIX: Provide both authorId and the author's name to satisfy the schema
+
           const postData = {
             ...req.body,
+            // Use the authorId from the JWT token for security and data integrity
             authorId: req.user.userId,
-            author: req.user.name, 
           };
-          res.status(201).json({ success: true, data: Post });
-        } catch (error: any) {
-          console.error("Error creating post in API:", JSON.stringify(error, null, 2));
-          // Mongoose validation errors are often the cause of 400s
-          if (error.name === 'ValidationError') {
-              return res.status(400).json({ success: false, error: 'Validation Error', details: error.errors });
+          
+          const post = await Post.create(postData);
+          
+          res.status(201).json({ success: true, data: post });
+        } catch (error) {
+          if (error instanceof Error) {
+            res.status(400).json({ success: false, error: error.message });
+          } else {
+            res.status(400).json({ success: false, error: 'An unknown error occurred.' });
           }
-          res.status(400).json({ success: false, error: error.message || 'An unknown error occurred.' });
         }
       })(req, res);
 
@@ -91,7 +93,11 @@ async function handleGetPosts(req: NextApiRequest, res: NextApiResponse) {
     ]);
 
     res.status(200).json({
-      posts: posts.map(p => ({ ...p, author: (p.authorId as any)?.name || 'Unknown' })),
+      posts: posts.map(p => ({ 
+        ...p, 
+        // Gracefully handle cases where authorId is not populated
+        author: (p.authorId as any)?.name || 'Unknown' 
+      })),
       total,
       hasMore: skipNum + posts.length < total,
     });

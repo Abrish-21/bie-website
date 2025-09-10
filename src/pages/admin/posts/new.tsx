@@ -1,5 +1,3 @@
-// src/pages/admin/posts/new.tsx
-
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/router';
 import { ArrowLeft, Save, Eye, UploadCloud, Bold, Italic, List, ListOrdered, Link, Image, Pilcrow, Heading1, Heading2 } from 'lucide-react';
@@ -46,7 +44,7 @@ interface PostFormData {
   category: string;
   type: string;
   tags: string[];
-  isDraft: boolean;
+  isDraft: boolean; // ⭐ FIXED: Added isDraft to the interface
   readTime: number | string;
   author: string;
   authorId: string;
@@ -84,7 +82,7 @@ export default function NewPost() {
     category: 'Business',
     type: 'featuredArticle', // Default to a valid type
     tags: [],
-    isDraft: false,
+    isDraft: true, // ⭐ FIXED: Set default to true to match form state
     readTime: '',
     author: '',
     authorId: '',
@@ -121,7 +119,8 @@ export default function NewPost() {
 
   const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value, type } = e.target;
-    const newValue = (e.target as HTMLInputElement).type === 'checkbox' || (e.target as HTMLInputElement).type === 'radio'
+    // ⭐ FIXED: Correctly handle boolean values for radio buttons
+    const newValue = type === 'radio'
       ? (e.target as HTMLInputElement).checked
       : value;
 
@@ -231,17 +230,20 @@ export default function NewPost() {
         throw new Error('No image provided, even after checking for selected file or URL.');
       }
 
+      // ⭐ START OF UPDATED CODE BLOCK ⭐
       const postData = {
         ...formData,
         imageUrl: finalImageUrl,
-        author: formData.author || (user?.role === 'superadmin' ? 'Super Admin' : 'Content Admin'),
-        authorId: formData.authorId || user?._id,
+        // Ensure author and authorId are correctly passed
+        author: user?.name || (user?.role === 'superadmin' ? 'Super Admin' : 'Content Admin'),
+        authorId: user?._id,
         slug: formData.title.toLowerCase()
           .replace(/[^a-z0-9]+/g, '-')
           .replace(/(^-|-$)/g, ''),
-        // FIX 2: Keep readTime as a string to match the database schema
-        readTime: String(formData.readTime),
+        readTime: Number(formData.readTime),
+        isDraft: formData.isDraft, // ⭐ FIXED: Ensure isDraft is correctly passed as a boolean
       };
+      // ⭐ END OF UPDATED CODE BLOCK ⭐
 
       await postsAPI.create(postData);
       router.push('/admin/dashboard');
