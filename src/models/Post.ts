@@ -8,8 +8,7 @@ export interface IPost extends Document {
   category: string;
   readTime: number; 
   publishDate: Date;
-  author: string;
-  authorId: mongoose.Types.ObjectId;
+  authorId: mongoose.Types.ObjectId; // Kept this as the single source of truth for the author
   views: number;
   tags: string[];
   type: 'featured' | 'market-watch' | 'opinion' | 'latest';
@@ -61,11 +60,6 @@ const postSchema = new Schema<IPost>({
   publishDate: {
     type: Date,
     default: Date.now
-  },
-  author: {
-    type: String,
-    required: [true, 'Author name is required'],
-    trim: true
   },
   authorId: {
     type: Schema.Types.ObjectId,

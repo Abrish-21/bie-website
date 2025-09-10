@@ -1,7 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import dbConnect from '../../../lib/dbConnect';
+import User from '../../../models/User'; // <-- This must be imported BEFORE the Post model
 import Post from '../../../models/Post';
-import User from '../../../models/User'; // <-- Added this import
 import { jwtVerify, JWTPayload } from 'jose';
 
 const JWT_SECRET = new TextEncoder().encode(
