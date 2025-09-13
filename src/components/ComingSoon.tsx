@@ -1,4 +1,5 @@
-import { Button } from "./ui/button";
+import { Linkedin, Send } from "lucide-react";
+import Link from "next/link";
 
 interface ComingSoonProps {
   onBackToHome: () => void;
@@ -6,48 +7,48 @@ interface ComingSoonProps {
 
 export function ComingSoon({ onBackToHome }: ComingSoonProps) {
   return (
-    <div className="min-h-[80vh] flex flex-col items-center bg-white text-black justify-center px-4">
-    
-      <div className="text-center max-w-2xl mx-auto">
-        {/* Brand-accent decorative element */}
-        <div className="w-24 h-24 mx-auto mb-8 rounded-full flex items-center justify-center" style={{ backgroundColor: '#F59E0B' }}>
-          <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center">
-            <span className="text-2xl font-bold text-black">BIE</span>
-          </div>
+    <div className="relative text-black h-full flex flex-col items-center justify-center bg-gray-900 text-white overflow-hidden">
+      {/* Subtle background pattern */}
+      <div className="absolute inset-0 w-full h-full bg-white "></div>
+      
+      <div className="text-center max-w-2xl mx-auto p-8 z-10">
+        <div className="mx-auto mb-6 w-24 h-24 bg-yellow-600 rounded-full flex items-center justify-center shadow-lg">
+          <img 
+            src="/logo/bie-logo.png" 
+            alt="Business Info Ethiopia Logo" 
+            className="w-20 h-auto"
+          />
         </div>
 
-        <h1 className="text-4xl md:text-6xl mb-4 font-extrabold text-gray-900">
-          Coming Soon
+        <h1 className="text-4xl md:text-5xl font-bold text-gray-800 mb-3 tracking-tight">
+          We're Launching Soon
         </h1>
         
-        <h2 className="text-xl md:text-2xl mb-6 text-gray-700">
-          Ethiopia News Publishing
-        </h2>
-        
-        <p className="text-lg mb-8 leading-relaxed text-gray-600">
-          We're working hard to bring you the latest news and stories from Ethiopia. 
-          Our platform will feature comprehensive coverage of local events, politics, 
-          culture, and community stories.
+        <p className="text-md md:text-lg text-gray-600 mb-6">
+          A new era of business intelligence in Ethiopia is on the horizon.
         </p>
         
-        <div className="space-y-4">
-          <p className="text-gray-500">
-            Stay tuned for our official launch
+        <div className=" border border-gray-700 rounded-lg p-6 text-left mb-8 shadow-md">
+          <p className="text-sm text-gray-500 leading-relaxed">
+            <strong>Business Info Ethiopia</strong> is building the nation’s premier platform for business news, in-depth insights, and crucial market intelligence. Our team is working diligently to bring you a modern, data-driven experience.
           </p>
-          
-          {/* <Button 
-            onClick={onBackToHome}
-            className="px-8 py-3 rounded-lg transition-all duration-300 shadow-lg hover:shadow-xl"
-            style={{ backgroundColor: '#F59E0B', color: '#111827' }}
-          >
-            Back to Homepage
-          </Button> */}
         </div>
-      </div>
-      
-      {/* Subtle background pattern */}
-      <div className="absolute inset-0 -z-10 opacity-10">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(245,158,11,0.15),transparent)]"></div>
+
+        <div>
+          <p className="text-sm font-semibold text-gray-600 mb-3">
+            Stay connected and follow our journey:
+          </p>
+          <div className="flex justify-center items-center space-x-6">
+            <Link href="https://www.linkedin.com/company/business-info-ethiopia/" target="_blank" rel="noopener noreferrer" className="flex items-center text-blue-400 hover:text-blue-300 transition-colors duration-300">
+              <Linkedin className="w-5 h-5 mr-2" />
+              <span className="font-medium text-sm">LinkedIn</span>
+            </Link>
+            <Link href="https://t.me/Businessinfoeth" target="_blank" rel="noopener noreferrer" className="flex items-center text-sky-400 hover:text-sky-300 transition-colors duration-300">
+              <Send className="w-5 h-5 mr-2" />
+              <span className="font-medium text-sm">Telegram</span>
+            </Link>
+          </div>
+        </div>
       </div>
     </div>
   );

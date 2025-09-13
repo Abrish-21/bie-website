@@ -6,9 +6,11 @@ import { Footer } from '../components/Footer';
 export default function ComingSoonPage() {
   const router = useRouter();
   return (
-    <div className="bg-white min-h-screen">
+    <div className="flex flex-col min-h-screen bg-white">
       <Header />
-      <ComingSoon onBackToHome={() => router.push('/')} />
+      <main className="flex-grow">
+        <ComingSoon onBackToHome={() => router.push('/')} />
+      </main>
       <Footer />
     </div>
   );

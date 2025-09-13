@@ -7,7 +7,7 @@ export default function ComingSoonPage() {
   const router = useRouter();
   return (
     <div className="bg-white min-h-screen">
-      <Header />
+      {/* <Header /> */}
       <ComingSoon onBackToHome={() => router.push('')} />
       <Footer />
     </div>
