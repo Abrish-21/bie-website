@@ -23,8 +23,8 @@ const CustomAlertModal: React.FC<CustomAlertModalProps> = ({ message, onClose })
   return (
     <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50">
       <div className="bg-white p-6 rounded-lg shadow-xl max-w-sm w-full">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Error</h3>
-        <p className="text-gray-700 mb-6">{message}</p>
+        <h3 className="text-lg font-semibold text-black mb-4">Error</h3>
+        <p className="text-black mb-6">{message}</p>
         <button
           onClick={onClose}
           className="w-full px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
@@ -244,7 +244,7 @@ export default function NewPost() {
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading...</p>
+          <p className="mt-4 text-black">Loading...</p>
         </div>
       </div>
     );
@@ -263,13 +263,13 @@ export default function NewPost() {
             <div className="flex items-center space-x-4">
               <button
                 onClick={() => router.push('/admin/dashboard')}
-                className="flex items-center space-x-2 text-gray-600 hover:text-gray-800 transition-colors"
+                className="flex items-center space-x-2 text-black hover:text-gray-800 transition-colors"
               >
                 <ArrowLeft className="h-4 w-4" />
                 <span>Back to Dashboard</span>
               </button>
               <div className="h-6 w-px bg-gray-300"></div>
-              <h1 className="text-2xl font-bold text-gray-900">Create New Post</h1>
+              <h1 className="text-2xl font-bold text-black">Create New Post</h1>
             </div>
             <div className="flex items-center space-x-4">
               <button
@@ -306,16 +306,16 @@ export default function NewPost() {
               />
             )}
             {!currentImageSource && (
-                <div className="w-full h-64 bg-gray-200 flex items-center justify-center rounded-lg mb-6 text-gray-500">
+                <div className="w-full h-64 bg-gray-200 flex items-center justify-center rounded-lg mb-6 text-black">
                     <span className="text-lg font-medium">No Image Provided</span>
                 </div>
             )}
 
-            <h1 className="text-3xl font-bold text-gray-900 mb-4">{formData.title || 'Untitled Post'}</h1>
+            <h1 className="text-3xl font-bold text-black mb-4">{formData.title || 'Untitled Post'}</h1>
             {formData.excerpt && (
-              <p className="text-lg text-gray-600 mb-6 italic">"{formData.excerpt}"</p>
+              <p className="text-lg text-black mb-6 italic">"{formData.excerpt}"</p>
             )}
-            <div className="flex items-center space-x-4 mb-6 text-sm text-gray-500">
+            <div className="flex items-center space-x-4 mb-6 text-sm text-black">
               <span>Category: {formData.category}</span>
               <span>Status: {formData.isDraft ? 'Draft' : 'Published'}</span>
               <span>Read Time: {formData.readTime || 'N/A'} min</span>
@@ -333,7 +333,7 @@ export default function NewPost() {
               {formData.content ? (
                 <div dangerouslySetInnerHTML={{ __html: formData.content }} />
               ) : (
-                <p className="text-gray-400 italic">No content yet...</p>
+                <p className="text-black italic">No content yet...</p>
               )}
             </div>
           </div>
@@ -342,7 +342,7 @@ export default function NewPost() {
             <div className="bg-white shadow-sm rounded-lg p-6">
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                   <div>
-                    <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-2">
+                    <label htmlFor="title" className="block text-sm font-medium text-black mb-2">
                     Title *
                     </label>
                   <input
@@ -351,13 +351,13 @@ export default function NewPost() {
                     name="title"
                       value={formData.title}
                       onChange={handleInputChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-800"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-black"
                     placeholder="Enter post title..."
                     />
                   </div>
 
                   <div>
-                    <label htmlFor="category" className="block text-sm font-medium text-gray-700 mb-2">
+                    <label htmlFor="category" className="block text-sm font-medium text-black mb-2">
                       Category *
                     </label>
                     <select
@@ -365,7 +365,7 @@ export default function NewPost() {
                     name="category"
                       value={formData.category}
                       onChange={handleInputChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-800"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-black"
                     >
                       {CATEGORIES.map(category => (
                         <option key={category} value={category}>{category}</option>
@@ -374,7 +374,7 @@ export default function NewPost() {
                   </div>
 
                 <div>
-                  <label htmlFor="readTime" className="block text-sm font-medium text-gray-700 mb-2">
+                  <label htmlFor="readTime" className="block text-sm font-medium text-black mb-2">
                     Read Time (minutes) *
                   </label>
                   <input
@@ -383,13 +383,13 @@ export default function NewPost() {
                     name="readTime"
                     value={formData.readTime}
                     onChange={handleInputChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-800"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-black"
                     placeholder="Estimated read time..."
                   />
                 </div>
 
                 <div>
-                  <label htmlFor="isDraft" className="block text-sm font-medium text-gray-700 mb-2">
+                  <label htmlFor="isDraft" className="block text-sm font-medium text-black mb-2">
                     Status
                   </label>
                   <div className="flex items-center space-x-4">
@@ -401,7 +401,7 @@ export default function NewPost() {
                         onChange={() => setFormData(prev => ({ ...prev, isDraft: false }))}
                         className="mr-2"
                       />
-                      <span className="text-sm text-gray-800">Publish</span>
+                      <span className="text-sm text-black">Publish</span>
                     </label>
                     <label className="flex items-center">
                       <input
@@ -411,13 +411,13 @@ export default function NewPost() {
                         onChange={() => setFormData(prev => ({ ...prev, isDraft: true }))}
                         className="mr-2"
                       />
-                      <span className="text-sm text-gray-800">Save as Draft</span>
+                      <span className="text-sm text-black">Save as Draft</span>
                     </label>
                   </div>
                 </div>
 
                 <div>
-                  <label htmlFor="imageUpload" className="block text-sm font-medium text-gray-700 mb-2">Featured Image</label>
+                  <label htmlFor="imageUpload" className="block text-sm font-medium text-black mb-2">Featured Image</label>
                   <div className="flex items-center space-x-2 mb-2">
                       <input
                           type="file"
@@ -428,19 +428,19 @@ export default function NewPost() {
                       />
                       <label
                           htmlFor="imageUpload"
-                          className="flex items-center space-x-2 px-4 py-2 border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors bg-white text-gray-700"
+                          className="flex items-center space-x-2 px-4 py-2 border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors bg-white text-black"
                       >
                           <UploadCloud className="h-4 w-4" />
                           <span>{selectedImageFile ? selectedImageFile.name : 'Choose File'}</span>
                       </label>
-                      <span className="text-sm text-gray-500">OR</span>
+                      <span className="text-sm text-black">OR</span>
                       <input
                           type="url"
                           name="imageUrl"
                           value={formData.imageUrl}
                           onChange={handleInputChange}
                           placeholder="Paste Image URL"
-                          className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-800"
+                          className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-black"
                           disabled={!!selectedImageFile}
                       />
                   </div>
@@ -453,19 +453,19 @@ export default function NewPost() {
                           onError={(e) => { e.currentTarget.src = "https://placehold.co/300x128/cccccc/333333?text=Invalid+URL"; e.currentTarget.onerror = null; }}
                         />
                         {selectedImageFile && (
-                            <p className="text-xs text-gray-500 mt-1 text-gray-800">
+                            <p className="text-xs text-gray-500 mt-1 text-black">
                                 Selected: {selectedImageFile.name} ({(selectedImageFile.size / 1024).toFixed(2)} KB)
                             </p>
                         )}
                     </div>
                   )}
-                  {uploadingImage && <p className="text-blue-600 text-sm mt-2 text-gray-800">Uploading image...</p>}
+                  {uploadingImage && <p className="text-blue-600 text-sm mt-2 text-black">Uploading image...</p>}
                 </div>
 
               </div>
 
               <div className="mt-6">
-                <label htmlFor="excerpt" className="block text-sm font-medium text-gray-700 mb-2">
+                <label htmlFor="excerpt" className="block text-sm font-medium text-black mb-2">
                   Excerpt
                 </label>
                 <textarea
@@ -473,13 +473,13 @@ export default function NewPost() {
                   value={formData.excerpt}
                   onChange={handleInputChange}
                   rows={3}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-800"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-black"
                   placeholder="Brief summary of the post..."
                 />
               </div>
 
               <div className="mt-6">
-                <label htmlFor="seoTitle" className="block text-sm font-medium text-gray-700 mb-2">
+                <label htmlFor="seoTitle" className="block text-sm font-medium text-black mb-2">
                   SEO Title
                 </label>
                 <input
@@ -487,13 +487,13 @@ export default function NewPost() {
                   name="seoTitle"
                   value={formData.seoTitle || ''}
                   onChange={handleInputChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-800"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-black"
                   placeholder="SEO friendly title..."
                 />
               </div>
 
               <div className="mt-6">
-                <label htmlFor="seoDescription" className="block text-sm font-medium text-gray-700 mb-2">
+                <label htmlFor="seoDescription" className="block text-sm font-medium text-black mb-2">
                   SEO Description
                 </label>
                 <textarea
@@ -501,13 +501,13 @@ export default function NewPost() {
                   value={formData.seoDescription || ''}
                   onChange={handleInputChange}
                   rows={3}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-800"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-black"
                   placeholder="Meta description for search engines..."
                 />
               </div>
 
               <div className="mt-6">
-                <label htmlFor="tags" className="block text-sm font-medium text-gray-700 mb-2">
+                <label htmlFor="tags" className="block text-sm font-medium text-black mb-2">
                   Tags
                 </label>
                 <div className="flex items-center space-x-2 mb-3">
@@ -516,7 +516,7 @@ export default function NewPost() {
                     value={tagInput}
                     onChange={(e) => setTagInput(e.target.value)}
                     onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddTag())}
-                    className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-800"
+                    className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-black"
                     placeholder="Add a tag and press Enter..."
                   />
                   <button
@@ -549,11 +549,11 @@ export default function NewPost() {
                 </div>
 
               <div className="mt-6">
-                    <label htmlFor="content" className="block text-sm font-medium text-gray-700 mb-2">
+                    <label htmlFor="content" className="block text-sm font-medium text-black mb-2">
                   Content *
                     </label>
                     <TiptapEditor
-                      initialContent={formData.content}
+                      value={formData.content}
                       onContentChange={handleEditorContentChange}
                     />
                     </div>

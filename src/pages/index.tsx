@@ -7,8 +7,7 @@ import { Clock, User, Eye, Search, Filter } from 'lucide-react'
 import Link from 'next/link'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
-import { LiveFX } from '@/components/LiveFX'
-import { MainContent } from '@/components/MainContent'
+import HeroSection from '@/components/HeroSection'
 
 // This component renders the category filter buttons.
 // It receives a function to handle clicks and the currently selected category.
@@ -271,9 +270,7 @@ export default function HomePage() {
   return (
     <div className="min-h-screen bg-white">
       <Header />
-      <MainContent />
-
-      <LiveFX />
+      <HeroSection />
       {/* Search and Category Filters section */}
       <div className="max-w-7xl mx-auto px-4 py-4">
         {/* Search Input */}
@@ -392,7 +389,9 @@ export default function HomePage() {
           <AdSenseSlot slotId="YOUR_ADSENSE_SLOT_ID_BOTTOM" label="Footer" />
         </div>
       </div>
-      <Footer />
+     
+        <Footer />
+  
     </div>
   )
 }

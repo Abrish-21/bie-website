@@ -1,5 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import clientPromise from '../../../../lib/mongodb';
+import dbConnect from '../../../../lib/dbConnect';
+import Post from '../../../../models/Post';
+import User from '../../../../models/User'; // Ensure User model is imported
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET') {
@@ -7,21 +9,23 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    const client = await clientPromise;
-    const db = client.db("bie-website");
+    await dbConnect(); // Ensure DB connection
     const { slug } = req.query as { slug: string };
-    
-    const post = await db.collection("posts").findOne({ slug });
+
+    // Use Mongoose to find by slug and populate the authorId field
+    const post = await Post.findOne({ slug }).populate({
+      path: 'authorId', // Corrected from 'author'
+      model: User,
+      select: 'name profilePictureUrl', // Specify the fields you need
+    });
+
     if (!post) {
       return res.status(404).json({ error: 'Post not found' });
     }
-    
-    // Increment view count
-    await db.collection("posts").updateOne(
-      { slug },
-      { $inc: { views: 1 } }
-    );
-    
+
+    // Increment view count without affecting the returned object
+    await Post.updateOne({ _id: post._id }, { $inc: { views: 1 } });
+
     res.status(200).json({ post });
   } catch (error: any) {
     console.error('Post by slug API error:', error);

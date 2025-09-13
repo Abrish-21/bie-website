@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/router"
 import Link from "next/link"
+import Image from "next/image"
 import { useEffect, useState } from "react"
 import { ArrowLeft, Clock, Eye, Calendar, Tag, BarChart2 } from "lucide-react"
 import { Card } from "../../components/ui/card"
@@ -88,7 +89,7 @@ const PostDetailPage = () => {
           try {
             const [relatedRes, authorRes] = await Promise.all([
               fetch(`/api/posts/related/${fetchedPost._id}`),
-              fetch(`/api/posts/by-author/${fetchedPost.authorId}?currentPostId=${fetchedPost._id}`),
+              fetch(`/api/posts/by-author/${(fetchedPost.authorId as any)?._id}?currentPostId=${fetchedPost._id}`),
             ])
 
             if (relatedRes.ok) {
@@ -154,6 +155,7 @@ const PostDetailPage = () => {
   )
 
   const RelatedPostsSection = ({ title, posts }: { title: string; posts: any[] }) => {
+    console.log(`[Debug] Posts for "${title}":`, posts);
     if (!posts || posts.length === 0) return null
     return (
       <Card className="my-16 p-8 bg-white border border-gray-200 shadow-sm hover:shadow-md transition-shadow duration-300">
@@ -162,11 +164,13 @@ const PostDetailPage = () => {
           {posts.map((p) => (
             <Link href={`/posts/${p.slug}`} key={p._id} passHref>
               <div className="bg-white border border-gray-200 rounded-lg overflow-hidden hover:shadow-lg transition-all duration-300 group cursor-pointer">
-                <div className="relative overflow-hidden">
-                  <img
+                <div className="relative overflow-hidden h-48">
+                  <Image
                     src={p.imageUrl || "/placeholder.svg?height=300&width=600&query=news+article"}
                     alt={p.title}
-                    className="w-full h-48 object-cover grayscale group-hover:grayscale-0 group-hover:scale-105 transition-all duration-500"
+                    layout="fill"
+                    objectFit="cover"
+                    className="grayscale group-hover:grayscale-0 group-hover:scale-105 transition-all duration-500"
                   />
                   <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-10 transition-all duration-300"></div>
                 </div>
@@ -193,6 +197,18 @@ const PostDetailPage = () => {
                       {(p.views || Math.floor(Math.random() * 5000) + 1000).toLocaleString()}
                     </span>
                   </div>
+                  {p.authorId && (
+                    <div className="flex items-center mt-4">
+                      <Image
+                        src={(p.authorId as any).profilePictureUrl || "/placeholder.svg"}
+                        alt={(p.authorId as any).name}
+                        width={24}
+                        height={24}
+                        className="rounded-full"
+                      />
+                      <span className="ml-2 text-sm text-gray-600">{(p.authorId as any).name}</span>
+                    </div>
+                  )}
                 </div>
               </div>
             </Link>
@@ -237,8 +253,8 @@ const PostDetailPage = () => {
   const displayContent = post.fullContent || post.content || ""
   const displayImageUrl = post.imageUrl || "https://placehold.co/1200x400/f5f5f5/333333?text=No+Image"
 
-  const authorName = typeof post.author === "string" ? post.author : post.author?.name || "Unknown Author"
-  const authorImageUrl = typeof post.author === "object" ? post.author?.profilePictureUrl : post.authorImageUrl
+  const authorName = typeof post.author === "string" ? post.author : (post.authorId as any)?.name || "Unknown Author"
+  const authorImageUrl = typeof post.author === "object" ? post.author?.profilePictureUrl : (post.authorId as any)?.profilePictureUrl
   const authorInitial = authorName?.[0]?.toUpperCase() || "?"
 
   const renderContent = () => {
@@ -344,11 +360,14 @@ const PostDetailPage = () => {
             <div className="flex flex-wrap items-center justify-between gap-4 py-4 border-b border-gray-100">
               <div className="flex items-center space-x-4">
                 {authorImageUrl ? (
-                  <img
-                    src={authorImageUrl || "/placeholder.svg"}
-                    alt={authorName}
-                    className="h-12 w-12 rounded-full object-cover border-2 border-gray-200"
-                  />
+                  <div className="relative h-12 w-12 rounded-full overflow-hidden border-2 border-gray-200">
+                    <Image
+                      src={authorImageUrl || "/placeholder.svg"}
+                      alt={authorName}
+                      layout="fill"
+                      objectFit="cover"
+                    />
+                  </div>
                 ) : (
                   <div className="h-12 w-12 rounded-full bg-gray-300 flex items-center justify-center text-lg font-medium text-white">
                     {authorInitial}
@@ -377,16 +396,19 @@ const PostDetailPage = () => {
             </div>
 
             {/* Featured Image */}
-            <figure className="my-8 relative rounded-lg overflow-hidden">
-              <img
+            <figure className="my-8 relative rounded-lg overflow-hidden h-[300px] md:h-[400px]">
+              <Image
                 src={displayImageUrl || "/placeholder.svg"}
                 alt={post.title}
-                className="w-full h-[300px] md:h-[400px] object-cover grayscale hover:grayscale-0 transition-all duration-500"
-                onError={(e) => {
-                  if (e.currentTarget.src !== "https://placehold.co/1200x400/f5f5f5/333333?text=No+Featured+Image") {
-                    e.currentTarget.src = "https://placehold.co/1200x400/f5f5f5/333333?text=No+Featured+Image"
+                layout="fill"
+                objectFit="cover"
+                className="grayscale hover:grayscale-0 transition-all duration-500"
+                onError={(e: React.SyntheticEvent<HTMLImageElement, Event>) => {
+                  const target = e.target as HTMLImageElement;
+                  if (target.src !== "https://placehold.co/1200x400/f5f5f5/333333?text=No+Featured+Image") {
+                    target.src = "https://placehold.co/1200x400/f5f5f5/333333?text=No+Featured+Image"
                   }
-                  e.currentTarget.onerror = null
+                  target.onerror = null
                 }}
               />
             </figure>

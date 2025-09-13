@@ -2,19 +2,17 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/router';
-import { ArrowLeft, Save, Eye, UploadCloud, Bold, Italic, List, ListOrdered, Link, Image, Pilcrow, Heading1, Heading2, Trash2 } from 'lucide-react'; // Added icons
-import { postsAPI } from '../../../../lib/api'; // Adjust path
+import { ArrowLeft, Save, Eye, UploadCloud, Trash2 } from 'lucide-react';
+import { postsAPI } from '../../../../lib/api';
 import dynamic from 'next/dynamic';
-import { EditorContent, useEditor } from '@tiptap/react';
-import StarterKit from '@tiptap/starter-kit';
-import TiptapLinkExtension from '@tiptap/extension-link';
+import api from '@/lib/api';
 
 const CustomAlertModal: React.FC<{ message: string; onClose: () => void }> = ({ message, onClose }) => {
   return (
     <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50">
       <div className="bg-white p-6 rounded-lg shadow-xl max-w-sm w-full">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Error</h3>
-        <p className="text-gray-700 mb-6">{message}</p>
+        <h3 className="text-lg font-semibold text-black mb-4">Error</h3>
+        <p className="text-black mb-6">{message}</p>
         <button
           onClick={onClose}
           className="w-full px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
@@ -30,8 +28,8 @@ const ConfirmationModal: React.FC<{ message: string; onConfirm: () => void; onCa
   return (
     <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50">
       <div className="bg-white p-6 rounded-lg shadow-xl max-w-sm w-full">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Confirm Action</h3>
-        <p className="text-gray-700 mb-6">{message}</p>
+        <h3 className="text-lg font-semibold text-black mb-4">Confirm Action</h3>
+        <p className="text-black mb-6">{message}</p>
         <div className="flex justify-end space-x-4">
           <button
             onClick={onCancel}
@@ -52,39 +50,38 @@ const ConfirmationModal: React.FC<{ message: string; onConfirm: () => void; onCa
 };
 
 
-// Interface for Post form data (ensure it matches the backend and new.tsx)
+// Interface for Post form data
 interface PostFormData {
   title: string;
   excerpt: string;
-  content: string; // Will store HTML from TipTap
+  content: string;
   imageUrl: string;
   category: string;
-  type: 'featured' | 'market-watch' | 'opinion' | 'latest' | string;
   tags: string[];
   isDraft: boolean;
   readTime: number | string;
   author: string;
   authorId: string;
-  fullContent: string; // Also stores HTML content
-  seoTitle?: string; // Added back for completeness if your backend handles it
-  seoDescription?: string; // Added back for completeness if your backend handles it
-  slug: string; // Added for completeness if your backend handles it
+  fullContent: string;
+  seoTitle?: string;
+  seoDescription?: string;
+  slug?: string;
 }
 
 const CATEGORIES = [
-  'Business', 'Economy', 'Technology', 'Politics', 'Agriculture', 'Manufacturing',
-  'Services', 'Finance', 'Real Estate', 'Tourism', 'Education', 'Healthcare'
+  'Agriculture & Agribusiness',
+  'Banking & Financial Services',
+  'Energy & Mining',
+  'Manufacturing & Industry',
+  'Construction & Real Estate',
+  'Technology & Telecommunications',
+  'Trade & Retail',
+  'Transport & Logistics',
+  'Tourism & Hospitality',
+  'Healthcare & Pharmaceuticals',
+  'Education & Training',
+  'Public Sector & Policy',
 ];
-
-const POST_TYPES = [
-  { value: 'featured', label: 'Featured Article' },
-  { value: 'market-watch', label: 'Market Watch' },
-  { value: 'opinion', label: 'Opinion Piece' },
-  { value: 'latest', label: 'Latest News' }
-];
-
-
-
 
 const TiptapEditor = dynamic(() => import('../../../../components/TiptapEditor'), { ssr: false });
 
@@ -100,8 +97,7 @@ export default function EditPost() {
     excerpt: '',
     content: '',
     imageUrl: '',
-    category: 'Business',
-    type: 'latest',
+    category: 'Agriculture & Agribusiness',
     tags: [],
     isDraft: false,
     readTime: '',
@@ -153,23 +149,23 @@ export default function EditPost() {
       setLoading(true);
       try {
         const postData = await postsAPI.getById(id as string);
-        setFormData({
+        setFormData(prev => ({
+          ...prev,
           title: postData.title || '',
           excerpt: postData.excerpt || '',
           content: postData.content || '',
           imageUrl: postData.imageUrl || '',
-          category: postData.category || 'Business',
-          type: postData.type || 'latest',
+          category: postData.category || 'Agriculture & Agribusiness',
           tags: postData.tags || [],
-          isDraft: postData.isDraft || false,
+          isDraft: postData.isDraft ?? false,
           readTime: postData.readTime || '',
-          author: postData.author || (user?.role === 'superadmin' ? 'Super Admin' : 'Content Admin'),
-          authorId: postData.authorId || user?._id,
+          author: postData.author || prev.author,
+          authorId: postData.authorId || prev.authorId,
           fullContent: postData.fullContent || postData.content || '',
           seoTitle: postData.seoTitle || '',
           seoDescription: postData.seoDescription || '',
           slug: postData.slug || '',
-        });
+        }));
         setImagePreviewUrl(postData.imageUrl); // Set initial preview from fetched image
       } catch (error: any) {
         console.error('Error fetching post:', error);
@@ -183,14 +179,11 @@ export default function EditPost() {
   }, [id, user]); // Depend on 'id' and 'user'
 
   const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
-    const { name, value, type } = e.target;
-    const newValue = (e.target as HTMLInputElement).type === 'checkbox' || (e.target as HTMLInputElement).type === 'radio'
-      ? (e.target as HTMLInputElement).checked
-      : value;
-
+    const { name, value } = e.target;
+    
     setFormData((prev) => ({
       ...prev,
-      [name]: newValue,
+      [name]: value,
     }));
   }, []);
 
@@ -212,7 +205,7 @@ export default function EditPost() {
       setSelectedImageFile(null);
       setImagePreviewUrl(formData.imageUrl || null); // Revert to fetched URL if no new file
     }
-  }, [formData.imageUrl]); // Add formData.imageUrl to dependency array
+  }, [formData.imageUrl]);
 
   const handleAddTag = useCallback(() => {
     if (tagInput.trim() && !formData.tags.includes(tagInput.trim())) {
@@ -231,25 +224,25 @@ export default function EditPost() {
     }));
   }, []);
 
-  // ⭐ FIX: Modified uploadImage to send FormData instead of Base64 JSON ⭐
   const uploadImage = async (file: File): Promise<string> => {
     setUploadingImage(true);
     try {
+      if (!file) {
+        throw new Error('No valid file provided for upload.');
+      }
+      
       const formData = new FormData();
-      formData.append('image', file); // 'image' should match the field name in your API (`files.image`)
+      formData.append('image', file);
 
-      const response = await fetch('/api/upload-image', {
-        method: 'POST',
-        body: formData, // Send FormData directly
+      // Use the 'api' instance which is configured to send cookies
+      const response = await api.post('/upload-image', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
       });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Image upload failed');
-      }
-
-      const data = await response.json();
-      return data.imageUrl;
+      // The backend now returns a 'imageUrl' field, not 'location'
+      return response.data.imageUrl;
     } catch (uploadError: any) {
       console.error('Error during image upload:', uploadError);
       throw new Error(uploadError.message || 'Failed to upload image.');
@@ -263,8 +256,8 @@ export default function EditPost() {
     setLoading(true);
     setAlertMessage(null);
 
-    if (!formData.title || !formData.content || !formData.category || !formData.type || !formData.readTime) {
-        setAlertMessage('Please fill in all required fields: Title, Content, Category, Type, and Read Time.');
+    if (!formData.title || !formData.content || !formData.category || !formData.readTime) {
+        setAlertMessage('Please fill in all required fields: Title, Content, Category, and Read Time.');
         setLoading(false);
         return;
     }
@@ -325,7 +318,7 @@ export default function EditPost() {
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading Post Data...</p>
+          <p className="mt-4 text-black">Loading Post Data...</p>
         </div>
       </div>
     );
@@ -336,7 +329,7 @@ export default function EditPost() {
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Authenticating User...</p>
+          <p className="mt-4 text-black">Authenticating User...</p>
         </div>
       </div>
     );
@@ -363,19 +356,19 @@ export default function EditPost() {
             <div className="flex items-center space-x-4">
               <button
                 onClick={() => router.push('/admin/dashboard')}
-                className="flex items-center space-x-2 text-gray-600 hover:text-gray-800 transition-colors"
+                className="flex items-center space-x-2 text-black hover:text-gray-800 transition-colors"
               >
                 <ArrowLeft className="h-4 w-4" />
                 <span>Back to Dashboard</span>
               </button>
               <div className="h-6 w-px bg-gray-300"></div>
-              <h1 className="text-2xl font-bold text-gray-900">Edit Post</h1>
+              <h1 className="text-2xl font-bold text-black">Edit Post</h1>
             </div>
             <div className="flex items-center space-x-4">
               <button
                 type="button"
                 onClick={() => setPreviewMode(!previewMode)}
-                className="flex items-center space-x-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors text-gray-700"
+                className="flex items-center space-x-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
               >
                 <Eye className="h-4 w-4" />
                 <span>{previewMode ? 'Edit' : 'Preview'}</span>
@@ -405,7 +398,7 @@ export default function EditPost() {
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         {previewMode ? (
-          <div className="bg-white shadow-lg rounded-xl p-8 transition-all duration-300">
+          <div className="bg-white shadow-sm rounded-lg p-6">
             {currentImageSource && (
               <img
                 src={currentImageSource}
@@ -415,18 +408,17 @@ export default function EditPost() {
               />
             )}
             {!currentImageSource && (
-                <div className="w-full h-64 bg-gray-200 flex items-center justify-center rounded-lg mb-6 text-gray-500">
+                <div className="w-full h-64 bg-gray-200 flex items-center justify-center rounded-lg mb-6 text-black">
                     <span className="text-lg font-medium">No Image Provided</span>
                 </div>
             )}
 
-            <h1 className="text-3xl font-bold text-gray-900 mb-4">{formData.title || 'Untitled Post'}</h1>
+            <h1 className="text-3xl font-bold text-black mb-4">{formData.title || 'Untitled Post'}</h1>
             {formData.excerpt && (
-              <p className="text-lg text-gray-600 mb-6 italic">"{formData.excerpt}"</p>
+              <p className="text-lg text-black mb-6 italic">"{formData.excerpt}"</p>
             )}
-            <div className="flex items-center space-x-4 mb-6 text-sm text-gray-500">
+            <div className="flex items-center space-x-4 mb-6 text-sm text-black">
               <span>Category: {formData.category}</span>
-              <span>Type: {POST_TYPES.find(t => t.value === formData.type)?.label}</span>
               <span>Status: {formData.isDraft ? 'Draft' : 'Published'}</span>
               <span>Read Time: {formData.readTime || 'N/A'} min</span>
             </div>
@@ -441,19 +433,18 @@ export default function EditPost() {
             )}
             <div className="prose max-w-none">
               {formData.content ? (
-                // Render HTML content for preview
                 <div dangerouslySetInnerHTML={{ __html: formData.content }} />
               ) : (
-                <p className="text-gray-400 italic">No content yet...</p>
+                <p className="text-black italic">No content yet...</p>
               )}
             </div>
           </div>
         ) : (
           <form id="post-form" onSubmit={handleSubmit} className="space-y-6">
-            <div className="bg-white shadow-lg rounded-xl p-8">
+            <div className="bg-white shadow-sm rounded-lg p-6">
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                   <div>
-                    <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-2">
+                    <label htmlFor="title" className="block text-sm font-medium text-black mb-2">
                     Title *
                     </label>
                   <input
@@ -462,13 +453,13 @@ export default function EditPost() {
                     name="title"
                       value={formData.title}
                       onChange={handleInputChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-800"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-black"
                     placeholder="Enter post title..."
                     />
                   </div>
 
                   <div>
-                    <label htmlFor="category" className="block text-sm font-medium text-gray-700 mb-2">
+                    <label htmlFor="category" className="block text-sm font-medium text-black mb-2">
                       Category *
                     </label>
                     <select
@@ -476,7 +467,7 @@ export default function EditPost() {
                     name="category"
                       value={formData.category}
                       onChange={handleInputChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-800"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-black"
                     >
                       {CATEGORIES.map(category => (
                         <option key={category} value={category}>{category}</option>
@@ -484,25 +475,8 @@ export default function EditPost() {
                     </select>
                   </div>
 
-                  <div>
-                    <label htmlFor="type" className="block text-sm font-medium text-gray-700 mb-2">
-                    Post Type *
-                    </label>
-                  <select
-                    required
-                    name="type"
-                    value={formData.type}
-                    onChange={handleInputChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-800"
-                  >
-                    {POST_TYPES.map(type => (
-                      <option key={type.value} value={type.value}>{type.label}</option>
-                    ))}
-                  </select>
-                </div>
-
                 <div>
-                  <label htmlFor="readTime" className="block text-sm font-medium text-gray-700 mb-2">
+                  <label htmlFor="readTime" className="block text-sm font-medium text-black mb-2">
                     Read Time (minutes) *
                   </label>
                   <input
@@ -511,13 +485,13 @@ export default function EditPost() {
                     name="readTime"
                     value={formData.readTime}
                     onChange={handleInputChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-800"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-black"
                     placeholder="Estimated read time..."
                   />
                 </div>
 
                 <div>
-                  <label htmlFor="isDraft" className="block text-sm font-medium text-gray-700 mb-2">
+                  <label htmlFor="isDraft" className="block text-sm font-medium text-black mb-2">
                     Status
                   </label>
                   <div className="flex items-center space-x-4">
@@ -529,7 +503,7 @@ export default function EditPost() {
                         onChange={() => setFormData(prev => ({ ...prev, isDraft: false }))}
                         className="mr-2"
                       />
-                      <span className="text-sm text-gray-800">Publish</span>
+                      <span className="text-sm text-black">Publish</span>
                     </label>
                     <label className="flex items-center">
                       <input
@@ -539,13 +513,13 @@ export default function EditPost() {
                         onChange={() => setFormData(prev => ({ ...prev, isDraft: true }))}
                         className="mr-2"
                       />
-                      <span className="text-sm text-gray-800">Save as Draft</span>
+                      <span className="text-sm text-black">Save as Draft</span>
                     </label>
                   </div>
                 </div>
 
                 <div>
-                  <label htmlFor="imageUpload" className="block text-sm font-medium text-gray-700 mb-2">Featured Image</label>
+                  <label htmlFor="imageUpload" className="block text-sm font-medium text-black mb-2">Featured Image</label>
                   <div className="flex items-center space-x-2 mb-2">
                       <input
                           type="file"
@@ -556,19 +530,19 @@ export default function EditPost() {
                       />
                       <label
                           htmlFor="imageUpload"
-                          className="flex items-center space-x-2 px-4 py-2 border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors bg-white text-gray-700"
+                          className="flex items-center space-x-2 px-4 py-2 border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors bg-white text-black"
                       >
                           <UploadCloud className="h-4 w-4" />
                           <span>{selectedImageFile ? selectedImageFile.name : 'Choose File'}</span>
                       </label>
-                      <span className="text-sm text-gray-500">OR</span>
+                      <span className="text-sm text-black">OR</span>
                       <input
                           type="url"
                           name="imageUrl"
                           value={formData.imageUrl}
                           onChange={handleInputChange}
                           placeholder="Paste Image URL"
-                          className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-800"
+                          className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-black"
                           disabled={!!selectedImageFile}
                       />
                   </div>
@@ -581,19 +555,19 @@ export default function EditPost() {
                           onError={(e) => { e.currentTarget.src = "https://placehold.co/300x128/cccccc/333333?text=Invalid+URL"; e.currentTarget.onerror = null; }}
                         />
                         {selectedImageFile && (
-                            <p className="text-xs text-gray-500 mt-1 text-gray-800">
+                            <p className="text-xs text-gray-500 mt-1 text-black">
                                 Selected: {selectedImageFile.name} ({(selectedImageFile.size / 1024).toFixed(2)} KB)
                             </p>
                         )}
                     </div>
                   )}
-                  {uploadingImage && <p className="text-blue-600 text-sm mt-2 text-gray-800">Uploading image...</p>}
+                  {uploadingImage && <p className="text-blue-600 text-sm mt-2 text-black">Uploading image...</p>}
                 </div>
 
               </div>
 
               <div className="mt-6">
-                <label htmlFor="excerpt" className="block text-sm font-medium text-gray-700 mb-2">
+                <label htmlFor="excerpt" className="block text-sm font-medium text-black mb-2">
                   Excerpt
                 </label>
                 <textarea
@@ -601,13 +575,13 @@ export default function EditPost() {
                   value={formData.excerpt}
                   onChange={handleInputChange}
                   rows={3}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-800"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-black"
                   placeholder="Brief summary of the post..."
                 />
               </div>
 
               <div className="mt-6">
-                <label htmlFor="seoTitle" className="block text-sm font-medium text-gray-700 mb-2">
+                <label htmlFor="seoTitle" className="block text-sm font-medium text-black mb-2">
                   SEO Title
                 </label>
                 <input
@@ -615,13 +589,13 @@ export default function EditPost() {
                   name="seoTitle"
                   value={formData.seoTitle || ''}
                   onChange={handleInputChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-800"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-black"
                   placeholder="SEO friendly title..."
                 />
               </div>
 
               <div className="mt-6">
-                <label htmlFor="seoDescription" className="block text-sm font-medium text-gray-700 mb-2">
+                <label htmlFor="seoDescription" className="block text-sm font-medium text-black mb-2">
                   SEO Description
                 </label>
                 <textarea
@@ -629,13 +603,13 @@ export default function EditPost() {
                   value={formData.seoDescription || ''}
                   onChange={handleInputChange}
                   rows={3}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-800"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-black"
                   placeholder="Meta description for search engines..."
                 />
               </div>
 
               <div className="mt-6">
-                <label htmlFor="tags" className="block text-sm font-medium text-gray-700 mb-2">
+                <label htmlFor="tags" className="block text-sm font-medium text-black mb-2">
                   Tags
                 </label>
                 <div className="flex items-center space-x-2 mb-3">
@@ -644,7 +618,7 @@ export default function EditPost() {
                     value={tagInput}
                     onChange={(e) => setTagInput(e.target.value)}
                     onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddTag())}
-                    className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-800"
+                    className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-black"
                     placeholder="Add a tag and press Enter..."
                   />
                   <button
@@ -677,11 +651,11 @@ export default function EditPost() {
                 </div>
 
               <div className="mt-6">
-                    <label htmlFor="content" className="block text-sm font-medium text-gray-700 mb-2">
+                    <label htmlFor="content" className="block text-sm font-medium text-black mb-2">
                   Content *
                     </label>
                   <TiptapEditor
-                    initialContent={formData.content}
+                    value={formData.content}
                     onContentChange={handleEditorContentChange}
                   />
                 </div>

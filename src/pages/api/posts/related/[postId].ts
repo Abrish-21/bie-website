@@ -33,11 +33,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       _id: { $ne: postId }, // Exclude the current post
       $or: [
         { category: currentPost.category },
-        { tags: { $in: currentPost.tags } }, // $in finds documents where the tags field contains any value in the array
+        { tags: { $in: currentPost.tags } }, 
       ],
     })
+      .select('title slug excerpt imageUrl category publishDate readTime views authorId')
+      .populate('authorId', 'name profilePictureUrl') // Populate author details
       .sort({ publishDate: -1 })
-      .limit(4) // Let's suggest up to 4 related posts
+      .limit(4) 
       .lean()
 
     return res.status(200).json(relatedPosts)

@@ -22,12 +22,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // Find posts by the same author, excluding the current post.
     // We also add a limit to avoid fetching too many posts.
     const authorPosts = await Post.find({
-      author: authorId,
-      _id: { $ne: currentPostId }, // $ne means "not equal"
+      authorId: authorId,
+      _id: { $ne: currentPostId }, 
     })
-      .sort({ publishDate: -1 }) // Get the most recent ones
-      .limit(4) // Limit to 4 posts
-      .lean() // .lean() is a performance booster for read-only operations
+      .select('title slug excerpt imageUrl category publishDate readTime views authorId')
+      .populate('authorId', 'name profilePictureUrl') // Populate author details
+      .sort({ publishDate: -1 }) 
+      .limit(4) 
+      .lean()
 
     return res.status(200).json(authorPosts)
   } catch (error) {

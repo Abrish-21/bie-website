@@ -1,36 +1,54 @@
 // src/components/TiptapEditor.tsx
 
-import { useCallback } from 'react';
+import { useCallback, useEffect } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import TiptapImageExtension from '@tiptap/extension-image';
-import { Bold, Italic, List, ListOrdered, Link, Image as ImageIcon, Pilcrow, Heading1, Heading2 } from 'lucide-react';
+import TiptapLinkExtension from '@tiptap/extension-link';
+import { Bold, Italic, List, ListOrdered, Link, Image as ImageIcon, Pilcrow, Heading1, Heading2, Underline, Strikethrough, Code, Quote } from 'lucide-react';
 
 interface TiptapEditorProps {
-  initialContent: string;
+  value: string;
   onContentChange: (html: string) => void;
 }
 
-const TiptapEditor: React.FC<TiptapEditorProps> = ({ initialContent, onContentChange }) => {
+const TiptapEditor: React.FC<TiptapEditorProps> = ({ value, onContentChange }) => {
   const editor = useEditor({
     immediatelyRender: false,
     extensions: [
-      StarterKit,
+      StarterKit.configure({
+        heading: {
+          levels: [1, 2, 3],
+        },
+        // Disable the default link extension to avoid conflicts
+        link: false, 
+      }),
       TiptapImageExtension.configure({
         inline: true,
         allowBase64: true,
       }),
+      // Use the official link extension
+      TiptapLinkExtension.configure({
+        openOnClick: false,
+      }),
     ],
-    content: initialContent,
+    content: value,
     onUpdate: ({ editor }) => {
       onContentChange(editor.getHTML());
     },
     editorProps: {
       attributes: {
-        class: 'prose max-w-none focus:outline-none min-h-[300px] p-4 text-gray-800',
+        class: 'prose max-w-none focus:outline-none min-h-[300px] p-4 text-black',
       },
     },
   });
+
+  useEffect(() => {
+    if (editor && value !== editor.getHTML()) {
+      // Pass the emitUpdate option as an object
+      editor.commands.setContent(value, { emitUpdate: false });
+    }
+  }, [value, editor]);
 
   const setLink = useCallback(() => {
     if (!editor) return;
@@ -39,10 +57,10 @@ const TiptapEditor: React.FC<TiptapEditorProps> = ({ initialContent, onContentCh
 
     if (url === null) return;
     if (url === '') {
-      editor.chain().focus().unsetLink().run();
+      editor.chain().focus().extendMarkRange('link').unsetLink().run();
       return;
     }
-    editor.chain().focus().setLink({ href: url }).run();
+    editor.chain().focus().extendMarkRange('link').setLink({ href: url }).run();
   }, [editor]);
 
   const addImage = useCallback(() => {
@@ -61,31 +79,43 @@ const TiptapEditor: React.FC<TiptapEditorProps> = ({ initialContent, onContentCh
     <div className="border border-gray-300 rounded-lg overflow-hidden">
       <div className="flex flex-wrap items-center p-2 bg-gray-50 border-b border-gray-200 gap-1">
         <button type="button" onClick={() => editor.chain().focus().toggleBold().run()} disabled={!editor.can().chain().focus().toggleBold().run()} className={`p-2 rounded ${editor.isActive('bold') ? 'bg-blue-200' : 'hover:bg-gray-200'}`} title="Bold">
-          <Bold className="h-4 w-4 text-gray-700" />
+          <Bold className="h-4 w-4 text-black" />
         </button>
         <button type="button" onClick={() => editor.chain().focus().toggleItalic().run()} disabled={!editor.can().chain().focus().toggleItalic().run()} className={`p-2 rounded ${editor.isActive('italic') ? 'bg-blue-200' : 'hover:bg-gray-200'}`} title="Italic">
-          <Italic className="h-4 w-4 text-gray-700" />
+          <Italic className="h-4 w-4 text-black" />
         </button>
-        <button type="button" onClick={() => editor.chain().focus().toggleBulletList().run()} className={`p-2 rounded ${editor.isActive('bulletList') ? 'bg-blue-200' : 'hover:bg-gray-200'}`} title="Bullet List">
-          <List className="h-4 w-4 text-gray-700" />
+        <button type="button" onClick={() => editor.chain().focus().toggleUnderline().run()} disabled={!editor.can().chain().focus().toggleUnderline().run()} className={`p-2 rounded ${editor.isActive('underline') ? 'bg-blue-200' : 'hover:bg-gray-200'}`} title="Underline">
+          <Underline className="h-4 w-4 text-black" />
         </button>
-        <button type="button" onClick={() => editor.chain().focus().toggleOrderedList().run()} className={`p-2 rounded ${editor.isActive('orderedList') ? 'bg-blue-200' : 'hover:bg-gray-200'}`} title="Ordered List">
-          <ListOrdered className="h-4 w-4 text-gray-700" />
+        <button type="button" onClick={() => editor.chain().focus().toggleStrike().run()} disabled={!editor.can().chain().focus().toggleStrike().run()} className={`p-2 rounded ${editor.isActive('strike') ? 'bg-blue-200' : 'hover:bg-gray-200'}`} title="Strikethrough">
+          <Strikethrough className="h-4 w-4 text-black" />
         </button>
-        <button type="button" onClick={() => editor.chain().focus().setParagraph().run()} className={`p-2 rounded ${editor.isActive('paragraph') ? 'bg-blue-200' : 'hover:bg-gray-200'}`} title="Paragraph">
-          <Pilcrow className="h-4 w-4 text-gray-700" />
-        </button>
+        <div className="w-px h-6 bg-gray-300 mx-1"></div>
         <button type="button" onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()} className={`p-2 rounded ${editor.isActive('heading', { level: 1 }) ? 'bg-blue-200' : 'hover:bg-gray-200'}`} title="Heading 1">
-          <Heading1 className="h-4 w-4 text-gray-700" />
+          <Heading1 className="h-4 w-4 text-black" />
         </button>
         <button type="button" onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()} className={`p-2 rounded ${editor.isActive('heading', { level: 2 }) ? 'bg-blue-200' : 'hover:bg-gray-200'}`} title="Heading 2">
-          <Heading2 className="h-4 w-4 text-gray-700" />
+          <Heading2 className="h-4 w-4 text-black" />
         </button>
+        <button type="button" onClick={() => editor.chain().focus().setParagraph().run()} className={`p-2 rounded ${editor.isActive('paragraph') ? 'bg-blue-200' : 'hover:bg-gray-200'}`} title="Paragraph">
+          <Pilcrow className="h-4 w-4 text-black" />
+        </button>
+        <div className="w-px h-6 bg-gray-300 mx-1"></div>
+        <button type="button" onClick={() => editor.chain().focus().toggleBulletList().run()} className={`p-2 rounded ${editor.isActive('bulletList') ? 'bg-blue-200' : 'hover:bg-gray-200'}`} title="Bullet List">
+          <List className="h-4 w-4 text-black" />
+        </button>
+        <button type="button" onClick={() => editor.chain().focus().toggleOrderedList().run()} className={`p-2 rounded ${editor.isActive('orderedList') ? 'bg-blue-200' : 'hover:bg-gray-200'}`} title="Ordered List">
+          <ListOrdered className="h-4 w-4 text-black" />
+        </button>
+        <button type="button" onClick={() => editor.chain().focus().toggleBlockquote().run()} className={`p-2 rounded ${editor.isActive('blockquote') ? 'bg-blue-200' : 'hover:bg-gray-200'}`} title="Blockquote">
+          <Quote className="h-4 w-4 text-black" />
+        </button>
+        <div className="w-px h-6 bg-gray-300 mx-1"></div>
         <button type="button" onClick={setLink} className={`p-2 rounded ${editor.isActive('link') ? 'bg-blue-200' : 'hover:bg-gray-200'}`} title="Set Link">
-          <Link className="h-4 w-4 text-gray-700" />
+          <Link className="h-4 w-4 text-black" />
         </button>
         <button type="button" onClick={addImage} className="p-2 rounded hover:bg-gray-200" title="Add Image by URL">
-          <ImageIcon className="h-4 w-4 text-gray-700" />
+          <ImageIcon className="h-4 w-4 text-black" />
         </button>
       </div>
       <EditorContent editor={editor} />

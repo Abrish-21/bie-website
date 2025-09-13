@@ -2,53 +2,20 @@ import { useRouter } from "next/router";
 import { Clock, User, Share2, Facebook, Twitter, Linkedin } from "lucide-react";
 import { Button } from "./ui/button";
 
-// helper: turn titles into clean slugs
+// helper: turn titles into clean slugs 
 const slugify = (text: string) =>
   text.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)+/g, "");
 
 export function MainContent() {
   const router = useRouter();
 
-  const sidebarArticles = [
-    {
-      title: "Why ETH 500 can't buy ETH 500 worth of goods in Piassa",
-      timeAgo: "2 hours ago",
-      imageUrl:
-        "https://images.unsplash.com/photo-1607623198457-7aad066a4ade?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=1080",
-      excerpt:
-        "Exploring Ethiopia's inflation crisis and why the currency's value continues to drop.",
-    },
-    {
-      title: "Bitter harvest: why a quintal per export costs more in local market",
-      timeAgo: "4 hours ago",
-      imageUrl:
-        "https://images.unsplash.com/photo-1666987571351-737b29874697?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=1080",
-      excerpt:
-        "Farmers face tough choices as export markets promise higher returns than local buyers.",
-    },
-    {
-      title: "Billionaires see a goldmine in African data centre market",
-      timeAgo: "6 hours ago",
-      imageUrl:
-        "https://images.unsplash.com/photo-1658124974726-d96bc44783cf?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=1080",
-      excerpt:
-        "Global investors pour billions into Africa's fast-growing digital infrastructure.",
-    },
-    {
-      title: "African trade, finance firms seek global investor",
-      timeAgo: "8 hours ago",
-      imageUrl:
-        "https://images.unsplash.com/photo-1551727974-8af20a3322f1?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=1080",
-      excerpt:
-        "African businesses look abroad for funding to expand trade and finance capabilities.",
-    },
-  ];
+
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-6">
       <div className="grid lg:grid-cols-3 gap-8">
         {/* Main Article */}
-        <div className="lg:col-span-2">
+        <div className="lg:col-span-1z">
           <article className="group">
             <div className="relative mb-6">
               <img
@@ -95,6 +62,9 @@ export function MainContent() {
             </div>
 
           </article>
+          <div className="">
+            <img src="https://images.unsplash.com/photo-1557804500-7a58fbcd4d1a?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=1080" alt="" />
+          </div>
         </div>
       </div>
     </div>

@@ -1,6 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import dbConnect from '../../../lib/dbConnect';
 import Post from '../../../models/Post';
+import User from '../../../models/User'; // Import the User model
 import { authMiddleware, AuthenticatedRequest } from '../../../lib/auth';
 
 async function handler(req: AuthenticatedRequest, res: NextApiResponse) {
@@ -26,11 +27,23 @@ async function handler(req: AuthenticatedRequest, res: NextApiResponse) {
 
 async function handleGetPost(req: NextApiRequest, res: NextApiResponse, id: string) {
   try {
-    const post = await Post.findById(id).lean();
+    // The query now populates the 'author' field with details from the User model
+    const post: any = await Post.findById(id) // Add 'any' type to resolve TS error
+      .populate({
+        path: 'authorId', // Corrected from 'author' to 'authorId'
+        model: User,
+        select: 'name email profilePictureUrl', // Select which author fields to include
+      })
+      .lean();
+
     if (!post) {
       return res.status(404).json({ error: 'Post not found' });
     }
-    res.status(200).json({ post });
+    // To maintain consistency for the frontend, we can remap authorId to author
+    const postWithAuthor = { ...post, author: post.authorId };
+    // delete postWithAuthor.authorId; // Optional: remove the original authorId field
+
+    res.status(200).json({ post: postWithAuthor });
   } catch (error: any) {
     console.error('Failed to fetch post', error);
     res.status(500).json({ error: 'Failed to fetch post' });
