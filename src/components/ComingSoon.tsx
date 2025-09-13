@@ -35,13 +35,13 @@ export function ComingSoon({ onBackToHome }: ComingSoonProps) {
             Stay tuned for our official launch
           </p>
           
-          <Button 
+          {/* <Button 
             onClick={onBackToHome}
             className="px-8 py-3 rounded-lg transition-all duration-300 shadow-lg hover:shadow-xl"
             style={{ backgroundColor: '#F59E0B', color: '#111827' }}
           >
             Back to Homepage
-          </Button>
+          </Button> */}
         </div>
       </div>
       
